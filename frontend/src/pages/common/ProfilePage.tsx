@@ -3,15 +3,17 @@ import { useAuthStore } from "../../store/authStore";
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  // Assuming KYC Status isn't easily grabbed from auth store since 'user' isn't on AuthState, let's use what we have or mock it.
   const role = useAuthStore((state) => state.role);
-  const user = {
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    role: role,
-    customClaims: { kycStatus: "PENDING" },
-  }; // Mocking user details for UI flow
+  const userId = useAuthStore((state) => state.userId);
+  const regionId = useAuthStore((state) => state.regionId);
+  const username = useAuthStore((state) => state.username);
+  const kycStatus = useAuthStore((state) => state.kycStatus);
+
+  const displayName = username?.trim() || "User";
+  const displayRole = role || "-";
+  const displayUserId = userId || "-";
+  const displayRegionId = regionId || "-";
+  const displayKycStatus = kycStatus || "PENDING";
 
   return (
     <div style={{ padding: "24px", maxWidth: "600px", margin: "0 auto" }}>
@@ -41,7 +43,7 @@ export function ProfilePage() {
             Name
           </label>
           <div style={{ fontSize: "16px", fontWeight: "500" }}>
-            {user?.firstName} {user?.lastName}
+            {displayName}
           </div>
         </div>
 
@@ -54,9 +56,9 @@ export function ProfilePage() {
               marginBottom: "4px",
             }}
           >
-            Email
+            User ID
           </label>
-          <div style={{ fontSize: "16px" }}>{user?.email}</div>
+          <div style={{ fontSize: "16px" }}>{displayUserId}</div>
         </div>
 
         <div style={{ marginBottom: "16px" }}>
@@ -70,7 +72,21 @@ export function ProfilePage() {
           >
             Role
           </label>
-          <div style={{ fontSize: "16px" }}>{user?.role}</div>
+          <div style={{ fontSize: "16px" }}>{displayRole}</div>
+        </div>
+
+        <div style={{ marginBottom: "16px" }}>
+          <label
+            style={{
+              display: "block",
+              fontSize: "14px",
+              color: "#6B7280",
+              marginBottom: "4px",
+            }}
+          >
+            Region ID
+          </label>
+          <div style={{ fontSize: "16px" }}>{displayRegionId}</div>
         </div>
 
         <div
@@ -98,19 +114,14 @@ export function ProfilePage() {
                 fontSize: "14px",
                 fontWeight: "500",
                 backgroundColor:
-                  user?.customClaims?.kycStatus === "VERIFIED"
-                    ? "#DEF7EC"
-                    : "#FEF3C7",
-                color:
-                  user?.customClaims?.kycStatus === "VERIFIED"
-                    ? "#03543F"
-                    : "#9B1C1C",
+                  displayKycStatus === "VERIFIED" ? "#DEF7EC" : "#FEF3C7",
+                color: displayKycStatus === "VERIFIED" ? "#03543F" : "#9B1C1C",
               }}
             >
-              {user?.customClaims?.kycStatus || "PENDING"}
+              {displayKycStatus}
             </span>
 
-            {user?.customClaims?.kycStatus !== "VERIFIED" && (
+            {displayKycStatus !== "VERIFIED" && (
               <button
                 onClick={() => navigate("/kyc-completion")}
                 style={{

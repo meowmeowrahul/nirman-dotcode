@@ -127,3 +127,123 @@ export async function getLiveMapData(regionId?: string) {
   });
   return response.data;
 }
+
+export interface RegionalActivityItem {
+  id: string;
+  region: string;
+  technicianName: string;
+  manualWeightKg: number;
+  ocrWeightKg: number;
+  status: string;
+}
+
+export async function getRegionalActivity() {
+  const response = await api.get<{ activity: RegionalActivityItem[] }>(
+    "/transactions/regional-activity",
+  );
+  return response.data;
+}
+
+export interface WardenKycForm {
+  id: string;
+  user: {
+    id: string;
+    name: string | null;
+    role: User["role"];
+    email: string | null;
+    phone: string | null;
+    region_id: string | null;
+    kyc_status: KycStatus | null;
+  } | null;
+  aadhar_doc_photo: {
+    url: string;
+    mime_type: string | null;
+  };
+  pan_doc_photo: {
+    url: string;
+    mime_type: string | null;
+  };
+  verification_selfie: {
+    url: string;
+    mime_type: string | null;
+  };
+  submitted_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getWardenKycForm(userId: string) {
+  const response = await api.get<{ kyc_form: WardenKycForm }>(
+    `/users/kyc-form/${userId}`,
+  );
+  return response.data;
+}
+
+export interface PendingKycItem {
+  user_id: string;
+  name: string;
+  submitted_at: string;
+  kyc_status: KycStatus;
+}
+
+export async function getPendingKycForms(regionId?: string) {
+  const response = await api.get<{ items: PendingKycItem[] }>(
+    "/users/kyc-form/pending",
+    {
+      params: { region_id: regionId },
+    },
+  );
+  return response.data;
+}
+
+export interface TechnicianAvailabilityItem {
+  id: string;
+  name: string;
+  phone: string | null;
+  rating: number | null;
+  status: "AVAILABLE" | "BUSY" | "OFFLINE" | string;
+  region_id: string | null;
+}
+
+export async function getTechnicianAvailability(regionId?: string) {
+  const response = await api.get<{ technicians: TechnicianAvailabilityItem[] }>(
+    "/technicians/availability",
+    {
+      params: { region_id: regionId },
+    },
+  );
+  return response.data;
+}
+
+export interface ComplaintItem {
+  id: string;
+  reporter_user_id: string;
+  accused_user_id: string;
+  category: string;
+  description: string;
+  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
+  created_at: string;
+}
+
+export async function getComplaints(params?: {
+  region_id?: string;
+  status?: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
+}) {
+  const response = await api.get<{ complaints: ComplaintItem[] }>(
+    "/complaints",
+    {
+      params,
+    },
+  );
+  return response.data;
+}
+
+export async function updateComplaintStatus(
+  complaintId: string,
+  status: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED",
+) {
+  const response = await api.patch<{
+    complaint: { id: string; status: string };
+  }>(`/complaints/${complaintId}/status`, { status });
+  return response.data;
+}
