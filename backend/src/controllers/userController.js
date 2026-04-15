@@ -1,9 +1,39 @@
 const User = require("../models/User");
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
+const KycForm = require("../models/KycForm");
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
+}
+
+function normalizeKycImage(value) {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    return {
+      url: trimmed,
+      mime_type: null,
+    };
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const url = typeof value.url === "string" ? value.url.trim() : "";
+  if (!url) {
+    return null;
+  }
+
+  return {
+    url,
+    mime_type: typeof value.mime_type === "string" && value.mime_type.trim()
+      ? value.mime_type.trim()
+      : null,
+  };
 }
 
 async function updateKycStatus(req, res, next) {
@@ -27,6 +57,131 @@ async function updateKycStatus(req, res, next) {
     }
 
     return res.status(200).json({ user: user.toJSON() });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function submitKycForm(req, res, next) {
+  try {
+    const userId = req.user && req.user.userId;
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const aadharDocPhoto = normalizeKycImage(req.body.aadhar_doc_photo);
+    const panDocPhoto = normalizeKycImage(req.body.pan_doc_photo);
+    const verificationSelfie = normalizeKycImage(req.body.verification_selfie);
+
+    if (!aadharDocPhoto || !panDocPhoto || !verificationSelfie) {
+      return res.status(400).json({
+        error: "aadhar_doc_photo, pan_doc_photo and verification_selfie are required",
+      });
+    }
+
+    const form = await KycForm.findOneAndUpdate(
+      { user_id: userId },
+      {
+        $set: {
+          aadhar_doc_photo: aadharDocPhoto,
+          pan_doc_photo: panDocPhoto,
+          verification_selfie: verificationSelfie,
+          submitted_at: new Date(),
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    );
+
+    await User.findByIdAndUpdate(userId, { $set: { "kyc.status": "PENDING" } });
+
+    return res.status(200).json({
+      kyc_form: {
+        id: String(form._id),
+        user_id: String(form.user_id),
+        aadhar_doc_photo: form.aadhar_doc_photo,
+        pan_doc_photo: form.pan_doc_photo,
+        verification_selfie: form.verification_selfie,
+        submitted_at: form.submitted_at,
+        created_at: form.createdAt,
+        updated_at: form.updatedAt,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getOwnKycForm(req, res, next) {
+  try {
+    const userId = req.user && req.user.userId;
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const form = await KycForm.findOne({ user_id: userId }).lean();
+    if (!form) {
+      return res.status(404).json({ error: "kyc form not found" });
+    }
+
+    return res.status(200).json({
+      kyc_form: {
+        id: String(form._id),
+        user_id: String(form.user_id),
+        aadhar_doc_photo: form.aadhar_doc_photo,
+        pan_doc_photo: form.pan_doc_photo,
+        verification_selfie: form.verification_selfie,
+        submitted_at: form.submitted_at,
+        created_at: form.createdAt,
+        updated_at: form.updatedAt,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getKycFormForWarden(req, res, next) {
+  try {
+    const { userId } = req.params;
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json({ error: "valid userId is required" });
+    }
+
+    const form = await KycForm.findOne({ user_id: userId })
+      .populate("user_id", "name role email phone region_id kyc.status")
+      .lean();
+
+    if (!form) {
+      return res.status(404).json({ error: "kyc form not found" });
+    }
+
+    return res.status(200).json({
+      kyc_form: {
+        id: String(form._id),
+        user: form.user_id
+          ? {
+              id: String(form.user_id._id),
+              name: form.user_id.name || null,
+              role: form.user_id.role,
+              email: form.user_id.email || null,
+              phone: form.user_id.phone || null,
+              region_id: form.user_id.region_id || null,
+              kyc_status: form.user_id.kyc && form.user_id.kyc.status ? form.user_id.kyc.status : null,
+            }
+          : null,
+        aadhar_doc_photo: form.aadhar_doc_photo,
+        pan_doc_photo: form.pan_doc_photo,
+        verification_selfie: form.verification_selfie,
+        submitted_at: form.submitted_at,
+        created_at: form.createdAt,
+        updated_at: form.updatedAt,
+      },
+    });
   } catch (error) {
     return next(error);
   }
@@ -107,4 +262,10 @@ async function listUserTransactions(req, res, next) {
   }
 }
 
-module.exports = { updateKycStatus, listUserTransactions };
+module.exports = {
+  updateKycStatus,
+  listUserTransactions,
+  submitKycForm,
+  getOwnKycForm,
+  getKycFormForWarden,
+};

@@ -30,8 +30,17 @@ async function register(req, res, next) {
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
+    const normalizedName =
+      (typeof payload.name === "string" && payload.name.trim()) ||
+      (typeof payload.username === "string" && payload.username.trim()) ||
+      (typeof payload.full_name === "string" && payload.full_name.trim()) ||
+      payload.email ||
+      payload.phone ||
+      null;
+
     const user = await User.create({
       ...payload,
+      name: normalizedName,
       password: hashedPassword,
     });
 

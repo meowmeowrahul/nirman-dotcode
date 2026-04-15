@@ -65,4 +65,27 @@ describe("Auth Integration - Name in JWT", () => {
     expect(payload.name).toBe("+910000000310");
     expect(payload.role).toBe("WARDEN");
   });
+
+  test("maps legacy username field into name on register", async () => {
+    const registerResponse = await request(app).post("/api/auth/register").send({
+      role: "TECHNICIAN",
+      username: "legacy.tech",
+      email: "legacy.tech@example.com",
+      password: "Password#1",
+      region_id: "R-PUNE-1",
+      location: { type: "Point", coordinates: [73.8567, 18.5204] },
+    });
+
+    expect(registerResponse.status).toBe(201);
+    expect(registerResponse.body.user.name).toBe("legacy.tech");
+
+    const loginResponse = await request(app).post("/api/auth/login").send({
+      email: "legacy.tech@example.com",
+      password: "Password#1",
+    });
+
+    expect(loginResponse.status).toBe(200);
+    const payload = jwt.verify(loginResponse.body.token, "test-secret");
+    expect(payload.name).toBe("legacy.tech");
+  });
 });
