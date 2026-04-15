@@ -22,6 +22,7 @@ import "./auth.css";
 const registerSchema = z
   .object({
     role: z.enum(["BENEFICIARY", "CONTRIBUTOR", "TECHNICIAN", "WARDEN"]),
+    name: z.string().trim().min(2, "Full name is required"),
     identity: z.string().trim().min(3, "Enter valid mobile or email"),
     password: z.string().min(1, "Password is required"),
     region_id: z.string().trim().optional(),
@@ -60,6 +61,7 @@ export function RegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: "BENEFICIARY",
+      name: "",
       identity: "",
       password: "",
       region_id: "",
@@ -86,6 +88,7 @@ export function RegisterPage() {
 
     const payload: {
       role: Role;
+      name: string;
       email?: string;
       phone?: string;
       password: string;
@@ -94,6 +97,7 @@ export function RegisterPage() {
       location?: { type: "Point"; coordinates: [number, number] };
     } = {
       role: values.role,
+      name: values.name,
       email: isEmail ? values.identity : undefined,
       phone: !isEmail ? values.identity : undefined,
       password: values.password,
@@ -190,6 +194,24 @@ export function RegisterPage() {
           {errors.root?.message && (
             <div className="auth-error-banner">{errors.root.message}</div>
           )}
+
+          <div className="auth-form-group">
+            <div className="auth-label-row">
+              <label className="auth-label">FULL NAME</label>
+            </div>
+            <div className="auth-input-wrap">
+              <User size={18} className="auth-input-icon" />
+              <input
+                type="text"
+                {...register("name")}
+                className="auth-input"
+                placeholder="Enter name as on Aadhar Card"
+              />
+            </div>
+            {errors.name && (
+              <span className="auth-error">{errors.name.message}</span>
+            )}
+          </div>
 
           <div className="auth-form-group">
             <div className="auth-label-row">

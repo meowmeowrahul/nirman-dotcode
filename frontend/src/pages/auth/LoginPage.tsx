@@ -42,7 +42,7 @@ export function LoginPage() {
     mutationFn: loginUser,
     onSuccess: (response) => {
       login(response.token);
-      navigate("/home");
+      navigate("/dashboard");
     },
     onError: (error) => {
       setError("root", {

@@ -7,6 +7,8 @@ import { RegisterPage } from "./pages/auth/RegisterPage";
 import { EmergencyRequestPage } from "./pages/beneficiary/EmergencyRequestPage";
 import { DashboardPage } from "./pages/common/DashboardPage";
 import { NotFoundPage } from "./pages/common/NotFoundPage";
+import { ProfilePage } from "./pages/common/ProfilePage";
+import { KycCompletionPage } from "./pages/common/KycCompletionPage";
 import { EscrowClosurePage } from "./pages/escrow/EscrowClosurePage";
 import { TechHandoverPage } from "./pages/technician/TechHandoverPage";
 import { TechVerifyPage } from "./pages/technician/TechVerifyPage";
@@ -29,13 +31,19 @@ function App() {
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/home" element={<RoleHomeRedirect />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/kyc-completion" element={<KycCompletionPage />} />
           <Route
-            path="/beneficiary/request"
+            path="/beneficiary/requests"
             element={
               <ProtectedRoute allowedRoles={["BENEFICIARY"]}>
                 <EmergencyRequestPage />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/beneficiary/request"
+            element={<Navigate to="/beneficiary/requests" replace />}
           />
           <Route
             path="/technician/verify"

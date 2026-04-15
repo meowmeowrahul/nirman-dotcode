@@ -109,3 +109,20 @@ export async function updateKycStatus(userId: string, status: KycStatus) {
   });
   return response.data;
 }
+
+export async function getUserTransactions(userId: string) {
+  const response = await api.get<{ transactions: any[] }>(
+    `/users/${userId}/transactions`,
+  );
+  return response.data;
+}
+
+export async function getLiveMapData(regionId?: string) {
+  const response = await api.get<{
+    active_requests: any[];
+    available_contributors: any[];
+  }>(`/search/live-map`, {
+    params: { region_id: regionId },
+  });
+  return response.data;
+}

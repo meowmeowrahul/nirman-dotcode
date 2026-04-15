@@ -5,7 +5,7 @@ export function RoleHomeRedirect() {
   const role = useAuthStore((state) => state.role);
 
   if (role === "BENEFICIARY") {
-    return <Navigate to="/beneficiary/request" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (role === "TECHNICIAN") {
