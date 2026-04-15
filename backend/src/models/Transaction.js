@@ -10,6 +10,12 @@ const transactionSchema = new Schema(
       required: true,
       index: true,
     },
+    contributor_id: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
     technician_id: {
       type: Schema.Types.ObjectId,
       ref: "User",

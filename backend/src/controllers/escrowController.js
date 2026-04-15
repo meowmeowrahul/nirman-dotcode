@@ -10,10 +10,14 @@ function validateObjectId(id) {
 
 async function lockEscrow(req, res, next) {
   try {
-    const { beneficiary_id, region_id } = req.body;
+    const { beneficiary_id, contributor_id, region_id } = req.body;
 
     if (!beneficiary_id || !validateObjectId(beneficiary_id)) {
       return res.status(400).json({ error: "valid beneficiary_id is required" });
+    }
+
+    if (contributor_id && !validateObjectId(contributor_id)) {
+      return res.status(400).json({ error: "contributor_id must be a valid ObjectId" });
     }
 
     const existingActive = await Transaction.findOne({
@@ -27,6 +31,7 @@ async function lockEscrow(req, res, next) {
 
     const tx = await Transaction.create({
       beneficiary_id,
+      contributor_id: contributor_id || null,
       region_id: region_id || null,
       status: "PAID_IN_ESCROW",
       escrow: {
