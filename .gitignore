@@ -1,0 +1,5 @@
+.agents
+stitch-downloads
+node_modules
+.env
+.env.local
