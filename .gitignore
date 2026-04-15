@@ -3,3 +3,5 @@ stitch-downloads
 node_modules
 .env
 .env.local
+.venv
+.rigour

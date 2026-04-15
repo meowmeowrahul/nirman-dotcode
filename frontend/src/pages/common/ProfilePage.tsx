@@ -10,136 +10,182 @@ export function ProfilePage() {
   const kycStatus = useAuthStore((state) => state.kycStatus);
 
   const displayName = username?.trim() || "User";
-  const displayRole = role || "-";
+  const displayRole =
+    role == "BENEFICIARY" || role == "CONTRIBUTOR" ? "CITIZEN" : role;
   const displayUserId = userId || "-";
   const displayRegionId = regionId || "-";
   const displayKycStatus = kycStatus || "PENDING";
+  const statusIsVerified = displayKycStatus === "VERIFIED";
+  const statusBg = statusIsVerified ? "#DEF7EC" : "#FEF3C7";
+  const statusText = statusIsVerified ? "#03543F" : "#9B1C1C";
+  const profileInitial = displayName.charAt(0).toUpperCase() || "U";
 
   return (
-    <div style={{ padding: "24px", maxWidth: "600px", margin: "0 auto" }}>
-      <h1
-        style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "24px" }}
-      >
-        User Profile
-      </h1>
+    <div
+      style={{
+        padding: "32px 20px",
+        maxWidth: "820px",
+        margin: "0 auto",
+      }}
+    >
+      <div style={{ marginBottom: "18px" }}>
+        <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#111827" }}>
+          User Profile
+        </h1>
+        <p style={{ fontSize: "14px", color: "#6B7280", marginTop: "6px" }}>
+          View your account details and keep verification up to date.
+        </p>
+      </div>
 
       <div
         style={{
           backgroundColor: "white",
-          padding: "24px",
-          borderRadius: "8px",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          borderRadius: "14px",
+          border: "1px solid #E5E7EB",
+          boxShadow: "0 12px 28px rgba(17,24,39,0.06)",
+          overflow: "hidden",
         }}
       >
-        <div style={{ marginBottom: "16px" }}>
-          <label
-            style={{
-              display: "block",
-              fontSize: "14px",
-              color: "#6B7280",
-              marginBottom: "4px",
-            }}
-          >
-            Name
-          </label>
-          <div style={{ fontSize: "16px", fontWeight: "500" }}>
-            {displayName}
+        <div
+          style={{
+            padding: "22px 24px",
+            borderBottom: "1px solid #E5E7EB",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div
+              style={{
+                width: "52px",
+                height: "52px",
+                borderRadius: "9999px",
+                backgroundColor: "#DBEAFE",
+                color: "#1E40AF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "20px",
+                fontWeight: "700",
+              }}
+            >
+              {profileInitial}
+            </div>
+            <div>
+              <div style={{ fontSize: "18px", fontWeight: "600", color: "#111827" }}>
+                {displayName}
+              </div>
+              <div style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}>
+                {displayRole}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div style={{ marginBottom: "16px" }}>
-          <label
+          <span
             style={{
-              display: "block",
-              fontSize: "14px",
-              color: "#6B7280",
-              marginBottom: "4px",
+              padding: "6px 12px",
+              borderRadius: "9999px",
+              fontSize: "12px",
+              fontWeight: "600",
+              backgroundColor: statusBg,
+              color: statusText,
+              letterSpacing: "0.2px",
             }}
           >
-            User ID
-          </label>
-          <div style={{ fontSize: "16px" }}>{displayUserId}</div>
-        </div>
-
-        <div style={{ marginBottom: "16px" }}>
-          <label
-            style={{
-              display: "block",
-              fontSize: "14px",
-              color: "#6B7280",
-              marginBottom: "4px",
-            }}
-          >
-            Role
-          </label>
-          <div style={{ fontSize: "16px" }}>{displayRole}</div>
-        </div>
-
-        <div style={{ marginBottom: "16px" }}>
-          <label
-            style={{
-              display: "block",
-              fontSize: "14px",
-              color: "#6B7280",
-              marginBottom: "4px",
-            }}
-          >
-            Region ID
-          </label>
-          <div style={{ fontSize: "16px" }}>{displayRegionId}</div>
+            KYC {displayKycStatus}
+          </span>
         </div>
 
         <div
           style={{
-            marginBottom: "24px",
-            paddingTop: "16px",
-            borderTop: "1px solid #E5E7EB",
+            padding: "22px 24px",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "14px",
           }}
         >
-          <label
+          <div
             style={{
-              display: "block",
-              fontSize: "14px",
-              color: "#6B7280",
-              marginBottom: "8px",
+              border: "1px solid #E5E7EB",
+              borderRadius: "10px",
+              padding: "12px 14px",
             }}
           >
-            KYC Status
-          </label>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span
-              style={{
-                padding: "4px 12px",
-                borderRadius: "9999px",
-                fontSize: "14px",
-                fontWeight: "500",
-                backgroundColor:
-                  displayKycStatus === "VERIFIED" ? "#DEF7EC" : "#FEF3C7",
-                color: displayKycStatus === "VERIFIED" ? "#03543F" : "#9B1C1C",
-              }}
-            >
-              {displayKycStatus}
-            </span>
+            <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
+              User ID
+            </div>
+            <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
+              {displayUserId}
+            </div>
+          </div>
 
-            {displayKycStatus !== "VERIFIED" && (
-              <button
-                onClick={() => navigate("/kyc-completion")}
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "#2563EB",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                }}
-              >
-                Complete KYC Form
-              </button>
-            )}
+          <div
+            style={{
+              border: "1px solid #E5E7EB",
+              borderRadius: "10px",
+              padding: "12px 14px",
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
+              Region ID
+            </div>
+            <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
+              {displayRegionId}
+            </div>
+          </div>
+
+          <div
+            style={{
+              border: "1px solid #E5E7EB",
+              borderRadius: "10px",
+              padding: "12px 14px",
+            }}
+          >
+            <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
+              Role
+            </div>
+            <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
+              {displayRole}
+            </div>
           </div>
         </div>
+
+        {!statusIsVerified && (
+          <div
+            style={{
+              padding: "18px 24px 24px",
+              borderTop: "1px solid #E5E7EB",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
+            <p style={{ fontSize: "14px", color: "#4B5563", margin: 0 }}>
+              Complete your KYC to unlock full account access.
+            </p>
+            <button
+              onClick={() => navigate("/kyc-completion")}
+              style={{
+                padding: "10px 14px",
+                backgroundColor: "#2563EB",
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "14px",
+                cursor: "pointer",
+                fontWeight: "600",
+                boxShadow: "0 8px 18px rgba(37,99,235,0.25)",
+              }}
+            >
+              Complete KYC Form
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
