@@ -24,7 +24,10 @@ export function DashboardPage() {
   const role = useAuthStore((state) => state.role);
   const userId = useAuthStore((state) => state.userId);
   const regionId = useAuthStore((state) => state.regionId);
+  const username = useAuthStore((state) => state.username);
+  const kycStatus = useAuthStore((state) => state.kycStatus);
   const navigate = useNavigate();
+  const welcomeName = username?.trim() || "User";
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", userId],
@@ -59,13 +62,16 @@ export function DashboardPage() {
             }}
           >
             <h1 style={{ margin: "4px 0", fontSize: "2rem" }}>
-              Welcome back, Rohan
+              Welcome {welcomeName}
             </h1>
-            <StatusChip label="Verified Citizen" tone="success" />
+            {kycStatus === "VERIFIED" ? (
+              <StatusChip label="Verified Citizen" tone="success" />
+            ) : kycStatus === "REJECTED" ? (
+              <StatusChip label="Verification Rejected" tone="error" />
+            ) : (
+              <StatusChip label="Verification Pending" tone="warning" />
+            )}
           </div>
-          <p style={{ color: "var(--muted-color, #666)", margin: 0 }}>
-            Your community has shared 12 cylinders today.
-          </p>
         </header>
 
         <section

@@ -6,6 +6,9 @@ export interface JwtPayload {
   userId: string;
   role: Role;
   region_id: string | null;
+  name?: string;
+  username?: string;
+  kyc_status?: KycStatus;
   iat: number;
   exp: number;
 }
@@ -13,6 +16,7 @@ export interface JwtPayload {
 export interface User {
   _id: string;
   role: Role;
+  name?: string;
   email?: string;
   phone?: string;
   region_id?: string | null;

@@ -8,6 +8,7 @@ import type {
 
 interface RegisterBody {
   role: User["role"];
+  name: string;
   email?: string;
   phone?: string;
   password: string;
