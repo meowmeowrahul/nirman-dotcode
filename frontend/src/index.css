@@ -272,6 +272,15 @@ button:disabled {
   background: rgba(234, 88, 12, 0.08);
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .success-panel {
   border: 1px solid rgba(22, 163, 74, 0.25);
   background: rgba(22, 163, 74, 0.08);

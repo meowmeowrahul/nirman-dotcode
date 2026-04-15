@@ -2,6 +2,8 @@ export type Role = "BENEFICIARY" | "CONTRIBUTOR" | "TECHNICIAN" | "WARDEN";
 
 export type KycStatus = "PENDING" | "VERIFIED" | "REJECTED";
 
+export type UserStatus = "IDLE" | "ACTIVE_CONTRIBUTOR" | "ACTIVE_BENEFICIARY";
+
 export interface JwtPayload {
   userId: string;
   role: Role;
@@ -56,6 +58,26 @@ export interface Transaction {
   };
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface UserTransactionView {
+  id: string;
+  status: Transaction["status"];
+  region_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  beneficiary?: {
+    id: string;
+    role?: Role;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
+  contributor?: {
+    id: string;
+    role?: Role;
+    email?: string | null;
+    phone?: string | null;
+  } | null;
 }
 
 export interface Contributor {

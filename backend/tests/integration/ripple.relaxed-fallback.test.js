@@ -3,7 +3,7 @@ const User = require("../../src/models/User");
 const app = require("../../src/app");
 const { setupTestDb, teardownTestDb, clearDb } = require("../helpers/db");
 
-describe("Ripple Integration - Urgency Bypass", () => {
+describe("Ripple Integration - Relaxed Fallback", () => {
   beforeAll(async () => {
     await setupTestDb();
     await User.syncIndexes();
@@ -15,34 +15,27 @@ describe("Ripple Integration - Urgency Bypass", () => {
 
   afterEach(async () => {
     await clearDb();
-    jest.restoreAllMocks();
   });
 
-  test("urgency_score 9 skips 500m and finds ~1500m contributor in first DB call", async () => {
+  test("returns nearby contributor even when listing status is not LISTED", async () => {
     await User.create({
       role: "CONTRIBUTOR",
-      phone: "+910000000010",
+      phone: "+910000000044",
       password: "hashed-password-placeholder",
-      kyc: { status: "VERIFIED", omc_id: "SV900010" },
-      contributor_listing: { status: "LISTED" },
-      location: { type: "Point", coordinates: [0, 0.0134747] },
+      kyc: { status: "PENDING", omc_id: "SV900044" },
+      contributor_listing: { status: "UNLISTED" },
+      location: { type: "Point", coordinates: [73.1623, 18.9319] },
     });
 
-    const aggregateSpy = jest.spyOn(User, "aggregate");
-
     const response = await request(app).post("/api/search/ripple").send({
-      lat: 0,
-      lng: 0,
-      urgency_score: 9,
+      lat: 18.9318,
+      lng: 73.1622,
+      urgency_score: 5,
     });
 
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
     expect(response.body).toHaveLength(1);
-    expect(response.body[0].phone).toBe("+910000000010");
-
-    expect(aggregateSpy).toHaveBeenCalledTimes(1);
-    const firstPipeline = aggregateSpy.mock.calls[0][0];
-    expect(firstPipeline[0].$geoNear.maxDistance).toBe(2000);
+    expect(response.body[0].phone).toBe("+910000000044");
   });
 });

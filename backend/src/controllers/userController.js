@@ -36,6 +36,11 @@ function normalizeKycImage(value) {
   };
 }
 
+function parseFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 async function updateKycStatus(req, res, next) {
   try {
     const { id } = req.params;
@@ -57,6 +62,53 @@ async function updateKycStatus(req, res, next) {
     }
 
     return res.status(200).json({ user: user.toJSON() });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateMyLocation(req, res, next) {
+  try {
+    const userId = req.user && req.user.userId;
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const lat = parseFiniteNumber(req.body.lat);
+    const lng = parseFiniteNumber(req.body.lng);
+
+    if (lat === null || lng === null) {
+      return res.status(400).json({ error: "lat and lng must be numbers" });
+    }
+
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ error: "invalid latitude or longitude range" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          location: {
+            type: "Point",
+            coordinates: [lng, lat],
+          },
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    return res.status(200).json({
+      location: {
+        user_id: String(user._id),
+        lat,
+        lng,
+      },
+    });
   } catch (error) {
     return next(error);
   }
@@ -309,4 +361,5 @@ module.exports = {
   getOwnKycForm,
   getKycFormForWarden,
   listPendingKycForms,
+  updateMyLocation,
 };

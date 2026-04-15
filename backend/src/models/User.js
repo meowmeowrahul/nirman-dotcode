@@ -68,6 +68,17 @@ const userSchema = new Schema(
         default: null,
       },
     },
+    contributor_listing: {
+      status: {
+        type: String,
+        enum: ["LISTED", "UNLISTED"],
+        default: "UNLISTED",
+      },
+      listed_at: {
+        type: Date,
+        default: null,
+      },
+    },
     location: {
       type: {
         type: String,

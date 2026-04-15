@@ -2,6 +2,7 @@ import { jwtDecode } from "jwt-decode";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { JwtPayload, KycStatus, Role } from "../types/domain";
+import { useTransactionStore } from "./transactionStore";
 
 interface AuthState {
   token: string | null;
@@ -25,6 +26,10 @@ export const useAuthStore = create<AuthState>()(
       kycStatus: null,
       login: (token) => {
         const payload = jwtDecode<JwtPayload>(token);
+        const transactionState = useTransactionStore.getState();
+        transactionState.setUserStatus("IDLE");
+        transactionState.setActiveTransaction(null);
+        transactionState.setLatestTransaction(null);
         set({
           token,
           role: payload.role,
@@ -34,7 +39,11 @@ export const useAuthStore = create<AuthState>()(
           kycStatus: payload.kyc_status ?? null,
         });
       },
-      logout: () =>
+      logout: () => {
+        const transactionState = useTransactionStore.getState();
+        transactionState.setUserStatus("IDLE");
+        transactionState.setActiveTransaction(null);
+        transactionState.setLatestTransaction(null);
         set({
           token: null,
           role: null,
@@ -42,7 +51,8 @@ export const useAuthStore = create<AuthState>()(
           regionId: null,
           username: null,
           kycStatus: null,
-        }),
+        });
+      },
     }),
     {
       name: "securelpg-auth",

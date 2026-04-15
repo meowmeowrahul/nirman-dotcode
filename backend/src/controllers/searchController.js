@@ -27,6 +27,17 @@ async function ripple(req, res, next) {
     const lat = parseNumber(req.body.lat);
     const lng = parseNumber(req.body.lng);
     const urgencyScore = parseNumber(req.body.urgency_score) || 0;
+    const regionId = typeof req.body.region_id === "string" ? req.body.region_id.trim() : null;
+    const rawRequesterUserId =
+      typeof req.body.requester_user_id === "string"
+        ? req.body.requester_user_id.trim()
+        : req.user && req.user.userId
+          ? String(req.user.userId)
+          : null;
+
+    const requesterUserId = req.user && req.user.role === "BENEFICIARY"
+      ? rawRequesterUserId
+      : null;
 
     if (lat === null || lng === null) {
       return res.status(400).json({ error: "lat and lng must be numbers" });
@@ -36,7 +47,13 @@ async function ripple(req, res, next) {
       return res.status(400).json({ error: "invalid latitude or longitude range" });
     }
 
-    const contributors = await rippleSearch({ lat, lng, urgencyScore });
+    const contributors = await rippleSearch({
+      lat,
+      lng,
+      urgencyScore,
+      regionId: regionId || null,
+      requesterUserId,
+    });
     return res.status(200).json(contributors);
   } catch (error) {
     return next(error);
@@ -56,7 +73,7 @@ async function liveMap(req, res, next) {
 
     const contributorFilter = {
       role: "CONTRIBUTOR",
-      "kyc.status": "VERIFIED",
+      "contributor_listing.status": "LISTED",
     };
     if (regionId) {
       contributorFilter.region_id = regionId;

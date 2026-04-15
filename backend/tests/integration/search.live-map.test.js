@@ -35,6 +35,7 @@ describe("Live Map Endpoint", () => {
       password: "hashed-password-placeholder",
       region_id: "R-PUNE-1",
       kyc: { status: "VERIFIED", omc_id: "SV200212" },
+      contributor_listing: { status: "LISTED" },
       location: { type: "Point", coordinates: [73.8667, 18.5304] },
     });
 
@@ -44,6 +45,7 @@ describe("Live Map Endpoint", () => {
       password: "hashed-password-placeholder",
       region_id: "R-PUNE-1",
       kyc: { status: "PENDING", omc_id: "SV200213" },
+      contributor_listing: { status: "UNLISTED" },
       location: { type: "Point", coordinates: [73.8767, 18.5404] },
     });
 

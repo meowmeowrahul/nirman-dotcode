@@ -105,8 +105,8 @@ async function releaseEscrow(req, res, next) {
       return res.status(404).json({ error: "transaction not found" });
     }
 
-    if (!["VERIFIED", "IN_TRANSIT"].includes(tx.status)) {
-      return res.status(400).json({ error: "invalid state transition: release requires VERIFIED or IN_TRANSIT" });
+    if (!["VERIFIED", "IN_TRANSIT", "COMPLETED"].includes(tx.status)) {
+      return res.status(400).json({ error: "invalid state transition: release requires VERIFIED, IN_TRANSIT or COMPLETED" });
     }
 
     const expectedSerial = tx.cylinder_evidence && tx.cylinder_evidence.serial_number;
@@ -117,6 +117,16 @@ async function releaseEscrow(req, res, next) {
     }
 
     tx.status = "COMPLETED";
+    if (tx.escrow.refund_to_beneficiary === null || tx.escrow.refund_to_beneficiary === undefined) {
+      tx.escrow.refund_to_beneficiary = tx.escrow.metal_security_deposit;
+    }
+
+    if (tx.escrow.final_gas_payout === null || tx.escrow.final_gas_payout === undefined) {
+      tx.escrow.final_gas_payout = Number(
+        (tx.escrow.gas_value_deposited - tx.escrow.service_fee).toFixed(2)
+      );
+    }
+
     await tx.save();
 
     return res.status(200).json({ transaction: tx });

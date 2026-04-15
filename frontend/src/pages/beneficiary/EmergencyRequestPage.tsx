@@ -1,9 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { lockEscrow, rippleSearch } from "../../api/endpoints";
+import { lockEscrow, rippleSearch, updateMyLocation } from "../../api/endpoints";
 import { getApiErrorMessage } from "../../api/error";
 import type { Contributor, Transaction } from "../../types/domain";
 import { useAuthStore } from "../../store/authStore";
+import { useTransactionStore } from "../../store/transactionStore";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusChip } from "../../components/StatusChip";
 
@@ -14,6 +15,9 @@ interface Coordinates {
 
 export function EmergencyRequestPage() {
   const userId = useAuthStore((state) => state.userId);
+  const regionId = useAuthStore((state) => state.regionId);
+  const setUserStatus = useTransactionStore((state) => state.setUserStatus);
+  const setActiveTransaction = useTransactionStore((state) => state.setActiveTransaction);
 
   const [coords, setCoords] = useState<Coordinates | null>(null);
   const [permissionState, setPermissionState] = useState<
@@ -43,11 +47,19 @@ export function EmergencyRequestPage() {
     },
   });
 
+  const updateLocationMutation = useMutation({
+    mutationFn: updateMyLocation,
+  });
+
   const lockMutation = useMutation({
     mutationFn: lockEscrow,
     onSuccess: (data) => {
       setLockedTransaction(data.transaction);
       setLockError(null);
+      setActiveTransaction({
+        id: data.transaction._id,
+        status: data.transaction.status,
+      });
     },
     onError: (error) => {
       setLockError(getApiErrorMessage(error, "Unable to lock escrow"));
@@ -66,10 +78,12 @@ export function EmergencyRequestPage() {
       (position) => {
         setPermissionState("granted");
         setSearchError(null);
-        setCoords({
+        const nextCoords = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        });
+        };
+        setCoords(nextCoords);
+        updateLocationMutation.mutate(nextCoords);
       },
       () => {
         setPermissionState("denied");
@@ -86,10 +100,13 @@ export function EmergencyRequestPage() {
       return;
     }
 
+    setUserStatus("ACTIVE_BENEFICIARY");
     searchMutation.mutate({
       lat: coords.lat,
       lng: coords.lng,
       urgency_score: urgencyScore,
+      region_id: regionId || undefined,
+      requester_user_id: userId || undefined,
     });
   };
 
@@ -99,7 +116,10 @@ export function EmergencyRequestPage() {
       return;
     }
 
-    lockMutation.mutate({ beneficiary_id: userId });
+    lockMutation.mutate({
+      beneficiary_id: userId,
+      contributor_id: selectedContributorId || undefined,
+    });
   };
 
   return (
@@ -163,7 +183,7 @@ export function EmergencyRequestPage() {
 
         {contributors.length === 0 && !searchMutation.isPending && (
           <div className="empty-state">
-            <p>No verified contributors found nearby.</p>
+            <p>No listed contributors found nearby.</p>
             <p className="muted-text">
               Retry search after location refresh or increase urgency score.
             </p>

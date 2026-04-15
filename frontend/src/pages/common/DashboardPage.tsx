@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "../../store/authStore";
+import { useTransactionStore } from "../../store/transactionStore";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusChip } from "../../components/StatusChip";
+import { ActiveListing } from "../../components/ActiveListing";
+import { EscrowReturn } from "../../components/EscrowReturn";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -15,6 +18,8 @@ import {
   getTechnicianAvailability,
   getUserTransactions,
   getWardenKycForm,
+  activateContributorListing,
+  updateMyLocation,
   updateComplaintStatus,
   updateKycStatus,
 } from "../../api/endpoints";
@@ -33,12 +38,35 @@ L.Icon.Default.mergeOptions({
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
+function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported in this browser"));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+      },
+      () => reject(new Error("Location permission denied"))
+    );
+  });
+}
+
 export function DashboardPage() {
   const role = useAuthStore((state) => state.role);
   const userId = useAuthStore((state) => state.userId);
   const regionId = useAuthStore((state) => state.regionId);
   const username = useAuthStore((state) => state.username);
   const kycStatus = useAuthStore((state) => state.kycStatus);
+  const userStatus = useTransactionStore((state) => state.userStatus);
+  const setUserStatus = useTransactionStore((state) => state.setUserStatus);
+  const activeTransaction = useTransactionStore((state) => state.activeTransaction);
+  const setActiveTransaction = useTransactionStore((state) => state.setActiveTransaction);
   const navigate = useNavigate();
   const welcomeName = username?.trim() || "User";
 
@@ -46,6 +74,8 @@ export function DashboardPage() {
   const [kycLookupInput, setKycLookupInput] = useState("");
   const [kycLookupTarget, setKycLookupTarget] = useState<string | null>(null);
   const [kycActionError, setKycActionError] = useState<string | null>(null);
+  const [listingError, setListingError] = useState<string | null>(null);
+  const [listingNotice, setListingNotice] = useState<string | null>(null);
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", userId],
@@ -135,6 +165,72 @@ export function DashboardPage() {
     },
   });
 
+  const updateLocationMutation = useMutation({
+    mutationFn: updateMyLocation,
+  });
+
+  const activateListingMutation = useMutation({
+    mutationFn: activateContributorListing,
+    onSuccess: () => {
+      setListingError(null);
+      setUserStatus("ACTIVE_CONTRIBUTOR");
+    },
+    onError: (error) => {
+      setListingError(
+        getApiErrorMessage(error, "Unable to activate contributor listing")
+      );
+      setUserStatus("IDLE");
+    },
+  });
+
+  useEffect(() => {
+    if (!txData?.transactions || !userId) {
+      return;
+    }
+
+    const contributorTx = txData.transactions.find(
+      (tx: any) => tx?.contributor?.id === userId
+    );
+    setActiveTransaction(contributorTx || null);
+  }, [txData, userId, setActiveTransaction]);
+
+  const handleLendLpgClick = async () => {
+    setUserStatus("ACTIVE_CONTRIBUTOR");
+    setListingError(null);
+    setListingNotice(null);
+
+    try {
+      let coords: { lat: number; lng: number } | null = null;
+
+      try {
+        coords = await getCurrentLocation();
+      } catch (_error) {
+        setListingNotice(
+          "Location unavailable. Listing is active using your saved region."
+        );
+      }
+
+      if (coords) {
+        await updateLocationMutation.mutateAsync(coords);
+      }
+
+      await activateListingMutation.mutateAsync({
+        lat: coords?.lat,
+        lng: coords?.lng,
+        region_id: regionId || undefined,
+      });
+    } catch (error) {
+      setUserStatus("IDLE");
+      setListingNotice(null);
+      setListingError(getApiErrorMessage(error, "Unable to access location"));
+    }
+  };
+
+  const handleRequestLpgClick = () => {
+    setUserStatus("ACTIVE_BENEFICIARY");
+    navigate("/beneficiary/requests");
+  };
+
   // We are creating the unified Citizen dashboard if role is BENEFICIARY or CONTRIBUTOR
   if (role === "BENEFICIARY" || role === "CONTRIBUTOR") {
     return (
@@ -181,10 +277,10 @@ export function DashboardPage() {
           <div
             className="action-card lend-card"
             style={{
-              backgroundColor: "#006A4E",
+              backgroundColor: "#059669",
               color: "white",
               padding: "2rem",
-              borderRadius: "1rem",
+              borderRadius: 4,
               position: "relative",
               overflow: "hidden",
             }}
@@ -203,33 +299,59 @@ export function DashboardPage() {
               Have an extra cylinder? Support a neighbor in need and earn
               community trust credits.
             </p>
-            <button
-              onClick={() => navigate("/escrow/closure")}
-              style={{
-                backgroundColor: "white",
-                color: "#006A4E",
-                padding: "0.75rem 1.5rem",
-                borderRadius: "2rem",
-                fontWeight: "bold",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              Start Lending <span aria-hidden="true">&rarr;</span>
-            </button>
+            {userStatus !== "ACTIVE_CONTRIBUTOR" ? (
+              <button
+                onClick={handleLendLpgClick}
+                style={{
+                  backgroundColor: "white",
+                  color: "#059669",
+                  padding: "0.75rem 1.5rem",
+                  borderRadius: 4,
+                  fontWeight: "bold",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                }}
+              >
+                Start Lending <span aria-hidden="true">&rarr;</span>
+              </button>
+            ) : (
+              <ActiveListing isLoading={activateListingMutation.isPending} />
+            )}
+            {listingError && (
+              <p
+                style={{
+                  marginTop: "0.75rem",
+                  color: "#FEE2E2",
+                  fontWeight: 600,
+                }}
+              >
+                {listingError}
+              </p>
+            )}
+            {listingNotice && (
+              <p
+                style={{
+                  marginTop: "0.75rem",
+                  color: "#D1FAE5",
+                  fontWeight: 600,
+                }}
+              >
+                {listingNotice}
+              </p>
+            )}
           </div>
 
           {/* Request LPG */}
           <div
             className="action-card request-card"
             style={{
-              backgroundColor: "#D32F2F",
+              backgroundColor: "#1E3A8A",
               color: "white",
               padding: "2rem",
-              borderRadius: "1rem",
+              borderRadius: 4,
               position: "relative",
               overflow: "hidden",
             }}
@@ -249,12 +371,12 @@ export function DashboardPage() {
               supply assistance.
             </p>
             <button
-              onClick={() => navigate("/beneficiary/requests")}
+              onClick={handleRequestLpgClick}
               style={{
                 backgroundColor: "white",
-                color: "#D32F2F",
+                color: "#1E3A8A",
                 padding: "0.75rem 1.5rem",
-                borderRadius: "2rem",
+                borderRadius: 4,
                 fontWeight: "bold",
                 border: "none",
                 cursor: "pointer",
@@ -267,6 +389,16 @@ export function DashboardPage() {
             </button>
           </div>
         </section>
+
+        {activeTransaction?.status === "COMPLETED" &&
+          activeTransaction?.contributor?.id === userId && (
+            <EscrowReturn
+              transaction={activeTransaction}
+              onAcknowledgeSuccess={() => {
+                setUserStatus("IDLE");
+              }}
+            />
+          )}
 
         <section
           className="dashboard-stats"

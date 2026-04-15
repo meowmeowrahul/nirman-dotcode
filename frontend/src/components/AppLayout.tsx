@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import { useAuthStore } from "../store/authStore";
+import { useTransactionStore } from "../store/transactionStore";
 import type { Role } from "../types/domain";
 import { useState, useRef, useEffect } from "react";
 import { MapPin, Bell, User, LogOut, Globe } from "lucide-react";
@@ -24,6 +25,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
   const logout = useAuthStore((state) => state.logout);
+  const userStatus = useTransactionStore((state) => state.userStatus);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -108,6 +110,21 @@ export function AppLayout() {
             position: "relative",
           }}
         >
+          <div
+            style={{
+              backgroundColor: "#1E3A8A",
+              color: "#FFFFFF",
+              border: "1px solid #1E3A8A",
+              borderRadius: 4,
+              padding: "6px 10px",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              letterSpacing: "0.02em",
+            }}
+          >
+            Status: {userStatus}
+          </div>
+
           <div ref={langDropdownRef} style={{ position: "relative" }}>
             <button
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}

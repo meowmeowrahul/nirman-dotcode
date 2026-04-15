@@ -43,6 +43,8 @@ export async function rippleSearch(payload: {
   lat: number;
   lng: number;
   urgency_score: number;
+  region_id?: string;
+  requester_user_id?: string;
 }) {
   const response = await api.post<Contributor[]>("/search/ripple", payload);
   return response.data;
@@ -50,12 +52,31 @@ export async function rippleSearch(payload: {
 
 export async function lockEscrow(payload: {
   beneficiary_id: string;
+  contributor_id?: string;
   region_id?: string;
 }) {
   const response = await api.post<{ transaction: Transaction }>(
     "/escrow/lock",
     payload,
   );
+  return response.data;
+}
+
+export async function updateMyLocation(payload: { lat: number; lng: number }) {
+  const response = await api.patch<{
+    location: { user_id: string; lat: number; lng: number };
+  }>("/users/location/me", payload);
+  return response.data;
+}
+
+export async function activateContributorListing(payload: {
+  lat?: number;
+  lng?: number;
+  region_id?: string;
+}) {
+  const response = await api.post<{
+    listing: { user_id: string; status: "LISTED" | "UNLISTED"; listed_at: string };
+  }>("/contributor/list", payload);
   return response.data;
 }
 

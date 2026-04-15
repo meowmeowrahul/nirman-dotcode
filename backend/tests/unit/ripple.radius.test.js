@@ -21,6 +21,7 @@ describe("Ripple Unit - Radius Logic", () => {
       role: "CONTRIBUTOR",
       password: "hashed-password-placeholder",
       kyc: { status: "VERIFIED", omc_id: "SV123456" },
+      contributor_listing: { status: "LISTED" },
     };
 
     await User.create([

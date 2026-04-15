@@ -8,6 +8,7 @@ const techRoutes = require("./routes/techRoutes");
 const technicianRoutes = require("./routes/technicianRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+const contributorRoutes = require("./routes/contributorRoutes");
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use("/api/tech", techRoutes);
 app.use("/api/technicians", technicianRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/contributor", contributorRoutes);
 
 app.use((error, _req, res, _next) => {
   if (error.name === "ValidationError") {
