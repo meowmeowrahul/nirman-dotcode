@@ -9,6 +9,18 @@ const userSchema = new Schema(
       enum: ["BENEFICIARY", "CONTRIBUTOR", "TECHNICIAN", "WARDEN"],
       required: true,
     },
+    name: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    username: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      unique: true,
+      sparse: true,
+    },
     email: {
       type: String,
       trim: true,
@@ -80,6 +92,17 @@ userSchema.pre("validate", function validateContact(next) {
   if (!this.email && !this.phone) {
     this.invalidate("email", "Either email or phone is required");
   }
+
+  if (!this.username) {
+    if (this.email) {
+      this.username = this.email;
+    } else if (this.phone) {
+      this.username = this.phone;
+    } else if (this.name) {
+      this.username = this.name;
+    }
+  }
+
   next();
 });
 

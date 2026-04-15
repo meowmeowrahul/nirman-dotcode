@@ -6,11 +6,14 @@ const SALT_ROUNDS = 10;
 
 function signToken(user) {
   const secret = process.env.JWT_SECRET || "dev-secret";
+  const username = user.username || user.name || user.email || user.phone || "user";
+
   return jwt.sign(
     {
       userId: String(user._id),
       role: user.role,
       region_id: user.region_id || null,
+      username,
     },
     secret,
     { expiresIn: "12h" }
