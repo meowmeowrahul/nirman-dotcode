@@ -1,41 +1,79 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import EmergencyRequestPage from './pages/EmergencyRequestPage';
-import KYCPage from './pages/KYCPage';
-import LendPage from './pages/LendPage';
-import MatchPage from './pages/MatchPage';
-import ProfilePage from './pages/ProfilePage';
-import WardenDashboardPage from './pages/warden/WardenDashboardPage';
-import WardenKYCQueuePage from './pages/warden/WardenKYCQueuePage';
-import AuditLogPage from './pages/warden/AuditLogPage';
+import { Navigate, Route, Routes } from "react-router-dom";
+import { AppLayout } from "./components/AppLayout";
+import { ProfileGuard } from "./components/ProfileGuard";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleHomeRedirect } from "./components/RoleHomeRedirect";
+import { ProfileCompletionPage } from "./pages/auth/ProfileCompletionPage";
+import { LoginPage } from "./pages/auth/LoginPage";
+import { RegisterPage } from "./pages/auth/RegisterPage";
+import { EmergencyRequestPage } from "./pages/beneficiary/EmergencyRequestPage";
+import { DashboardPage } from "./pages/common/DashboardPage";
+import { NotFoundPage } from "./pages/common/NotFoundPage";
+import { EscrowClosurePage } from "./pages/escrow/EscrowClosurePage";
+import { TechHandoverPage } from "./pages/technician/TechHandoverPage";
+import { TechVerifyPage } from "./pages/technician/TechVerifyPage";
+import { WardenKycPage } from "./pages/warden/WardenKycPage";
+import { useAuthStore } from "./store/authStore";
 
-const App: React.FC = () => {
+function LandingRedirect() {
+  const token = useAuthStore((state) => state.token);
+  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
+}
+
+function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Auth */}
-        <Route path="/login" element={<LoginPage />} />
+    <Routes>
+      <Route path="/" element={<LandingRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
 
-        {/* Citizen */}
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/request" element={<EmergencyRequestPage />} />
-        <Route path="/kyc" element={<KYCPage />} />
-        <Route path="/lend" element={<LendPage />} />
-        <Route path="/match" element={<MatchPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+      <Route element={<ProfileGuard />}>
+        <Route path="/profile-completion" element={<ProfileCompletionPage />} />
+      </Route>
 
-        {/* Warden */}
-        <Route path="/warden" element={<WardenDashboardPage />} />
-        <Route path="/warden/kyc" element={<WardenKYCQueuePage />} />
-        <Route path="/warden/audit" element={<AuditLogPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/home" element={<RoleHomeRedirect />} />
+          <Route
+            path="/beneficiary/request"
+            element={
+              <ProtectedRoute allowedRoles={["BENEFICIARY"]}>
+                <EmergencyRequestPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/technician/verify"
+            element={
+              <ProtectedRoute allowedRoles={["TECHNICIAN"]}>
+                <TechVerifyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/technician/handover"
+            element={
+              <ProtectedRoute allowedRoles={["TECHNICIAN"]}>
+                <TechHandoverPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/warden/kyc"
+            element={
+              <ProtectedRoute allowedRoles={["WARDEN"]}>
+                <WardenKycPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/escrow/closure" element={<EscrowClosurePage />} />
+        </Route>
+      </Route>
 
-        {/* Default redirect */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   );
-};
+}
 
 export default App;
