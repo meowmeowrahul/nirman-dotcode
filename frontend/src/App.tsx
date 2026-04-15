@@ -1,9 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
-import { ProfileGuard } from "./components/ProfileGuard";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleHomeRedirect } from "./components/RoleHomeRedirect";
-import { ProfileCompletionPage } from "./pages/auth/ProfileCompletionPage";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
 import { EmergencyRequestPage } from "./pages/beneficiary/EmergencyRequestPage";
@@ -26,10 +24,6 @@ function App() {
       <Route path="/" element={<LandingRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-
-      <Route element={<ProfileGuard />}>
-        <Route path="/profile-completion" element={<ProfileCompletionPage />} />
-      </Route>
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

@@ -14,14 +14,9 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const token = useAuthStore((state) => state.token);
   const role = useAuthStore((state) => state.role);
-  const profileCompleted = useAuthStore((state) => state.profileCompleted);
 
   if (!token || !role) {
     return <Navigate to="/login" replace />;
-  }
-
-  if (!profileCompleted) {
-    return <Navigate to="/profile-completion" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
