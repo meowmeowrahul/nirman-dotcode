@@ -55,6 +55,19 @@ const userSchema = new Schema(
         return ["TECHNICIAN", "WARDEN"].includes(this.role);
       },
     },
+    technician_availability: {
+      status: {
+        type: String,
+        enum: ["AVAILABLE", "BUSY", "OFFLINE"],
+        default: "AVAILABLE",
+      },
+      rating: {
+        type: Number,
+        min: 0,
+        max: 5,
+        default: null,
+      },
+    },
     location: {
       type: {
         type: String,

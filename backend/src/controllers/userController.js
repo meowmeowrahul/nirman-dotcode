@@ -187,6 +187,46 @@ async function getKycFormForWarden(req, res, next) {
   }
 }
 
+async function listPendingKycForms(req, res, next) {
+  try {
+    const regionId = req.query.region_id || req.user.region_id || null;
+
+    const forms = await KycForm.find()
+      .sort({ submitted_at: -1 })
+      .populate("user_id", "name region_id kyc.status")
+      .lean();
+
+    const items = forms
+      .filter((form) => {
+        const user = form.user_id;
+        if (!user) {
+          return false;
+        }
+
+        const isPending = user.kyc && user.kyc.status === "PENDING";
+        if (!isPending) {
+          return false;
+        }
+
+        if (regionId && user.region_id !== regionId) {
+          return false;
+        }
+
+        return true;
+      })
+      .map((form) => ({
+        user_id: String(form.user_id._id),
+        name: form.user_id.name || "Unknown",
+        submitted_at: form.submitted_at,
+        kyc_status: form.user_id.kyc.status,
+      }));
+
+    return res.status(200).json({ items });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listUserTransactions(req, res, next) {
   try {
     const { userId } = req.params;
@@ -268,4 +308,5 @@ module.exports = {
   submitKycForm,
   getOwnKycForm,
   getKycFormForWarden,
+  listPendingKycForms,
 };
