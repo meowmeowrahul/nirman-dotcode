@@ -5,7 +5,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
   const userId = useAuthStore((state) => state.userId);
-  const regionId = useAuthStore((state) => state.regionId);
+  const city = useAuthStore((state) => state.city);
   const username = useAuthStore((state) => state.username);
   const kycStatus = useAuthStore((state) => state.kycStatus);
 
@@ -13,7 +13,7 @@ export function ProfilePage() {
   const displayRole =
     role == "BENEFICIARY" || role == "CONTRIBUTOR" ? "CITIZEN" : role;
   const displayUserId = userId || "-";
-  const displayRegionId = regionId || "-";
+  const displayCity = city || "-";
   const displayKycStatus = kycStatus || "PENDING";
   const statusIsVerified = displayKycStatus === "VERIFIED";
   const statusBg = statusIsVerified ? "#DEF7EC" : "#FEF3C7";
@@ -130,10 +130,10 @@ export function ProfilePage() {
             }}
           >
             <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
-              Region ID
+              City
             </div>
             <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
-              {displayRegionId}
+              {displayCity}
             </div>
           </div>
 

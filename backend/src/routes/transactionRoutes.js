@@ -4,6 +4,7 @@ const authorize = require("../middleware/authorize");
 const {
   getSummary,
   acknowledgeReturn,
+  acknowledgeContributorLock,
   listRegionalActivity,
 } = require("../controllers/transactionController");
 
@@ -15,6 +16,12 @@ router.post(
   auth,
   authorize("BENEFICIARY", "CONTRIBUTOR"),
   acknowledgeReturn
+);
+router.patch(
+  "/:transactionId/contributor-acknowledge",
+  auth,
+  authorize("CONTRIBUTOR"),
+  acknowledgeContributorLock
 );
 router.get(
   "/regional-activity",

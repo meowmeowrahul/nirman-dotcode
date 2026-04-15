@@ -27,7 +27,12 @@ async function ripple(req, res, next) {
     const lat = parseNumber(req.body.lat);
     const lng = parseNumber(req.body.lng);
     const urgencyScore = parseNumber(req.body.urgency_score) || 0;
-    const regionId = typeof req.body.region_id === "string" ? req.body.region_id.trim() : null;
+    const city =
+      typeof req.body.city === "string"
+        ? req.body.city.trim()
+        : typeof req.body.region_id === "string"
+          ? req.body.region_id.trim()
+          : null;
     const rawRequesterUserId =
       typeof req.body.requester_user_id === "string"
         ? req.body.requester_user_id.trim()
@@ -51,7 +56,7 @@ async function ripple(req, res, next) {
       lat,
       lng,
       urgencyScore,
-      regionId: regionId || null,
+      city: city || null,
       requesterUserId,
     });
     return res.status(200).json(contributors);
@@ -62,21 +67,21 @@ async function ripple(req, res, next) {
 
 async function liveMap(req, res, next) {
   try {
-    const regionId = req.query.region_id || req.user.region_id || null;
+    const city = req.query.city || req.query.region_id || req.user.city || req.user.region_id || null;
 
     const transactionFilter = {
       status: { $in: ACTIVE_REQUEST_STATUSES },
     };
-    if (regionId) {
-      transactionFilter.region_id = regionId;
+    if (city) {
+      transactionFilter.$or = [{ city }, { region_id: city }];
     }
 
     const contributorFilter = {
       role: "CONTRIBUTOR",
       "contributor_listing.status": "LISTED",
     };
-    if (regionId) {
-      contributorFilter.region_id = regionId;
+    if (city) {
+      contributorFilter.$or = [{ city }, { region_id: city }];
     }
 
     const [activeTransactions, contributors] = await Promise.all([
@@ -88,7 +93,7 @@ async function liveMap(req, res, next) {
       User.find(contributorFilter)
         .sort({ updatedAt: -1 })
         .limit(200)
-        .select("role region_id location")
+        .select("role city region_id location")
         .lean(),
     ]);
 
@@ -102,7 +107,8 @@ async function liveMap(req, res, next) {
         return {
           transaction_id: String(tx._id),
           status: tx.status,
-          region_id: tx.region_id || null,
+          city: tx.city || tx.region_id || null,
+          region_id: tx.region_id || tx.city || null,
           lat: position.lat,
           lng: position.lng,
           updated_at: tx.updatedAt,
@@ -120,7 +126,8 @@ async function liveMap(req, res, next) {
         return {
           user_id: String(user._id),
           role: user.role,
-          region_id: user.region_id || null,
+          city: user.city || user.region_id || null,
+          region_id: user.region_id || user.city || null,
           lat: position.lat,
           lng: position.lng,
         };
@@ -128,7 +135,8 @@ async function liveMap(req, res, next) {
       .filter(Boolean);
 
     return res.status(200).json({
-      region_id: regionId,
+      city,
+      region_id: city,
       active_requests,
       available_contributors,
       generated_at: new Date().toISOString(),

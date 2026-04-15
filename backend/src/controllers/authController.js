@@ -12,7 +12,8 @@ function signToken(user) {
     {
       userId: String(user._id),
       role: user.role,
-      region_id: user.region_id || null,
+      city: user.city || user.region_id || null,
+      region_id: user.region_id || user.city || null,
       name,
     },
     secret,
@@ -38,9 +39,20 @@ async function register(req, res, next) {
       payload.phone ||
       null;
 
+    const normalizedCity =
+      (typeof payload.city === "string" && payload.city.trim()) ||
+      (typeof payload.region_id === "string" && payload.region_id.trim()) ||
+      null;
+
+    if (!normalizedCity) {
+      return res.status(400).json({ error: "city is required" });
+    }
+
     const user = await User.create({
       ...payload,
       name: normalizedName,
+      city: normalizedCity,
+      region_id: payload.region_id || normalizedCity,
       password: hashedPassword,
     });
 

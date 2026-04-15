@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
+const User = require("../models/User");
 const { calculateFinalGasPayout } = require("../services/escrowFinanceService");
 
 const ACTIVE_HOLDING_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
@@ -10,7 +11,7 @@ function validateObjectId(id) {
 
 async function lockEscrow(req, res, next) {
   try {
-    const { beneficiary_id, contributor_id, region_id } = req.body;
+    const { beneficiary_id, contributor_id, city, region_id } = req.body;
 
     if (!beneficiary_id || !validateObjectId(beneficiary_id)) {
       return res.status(400).json({ error: "valid beneficiary_id is required" });
@@ -29,16 +30,43 @@ async function lockEscrow(req, res, next) {
       return res.status(409).json({ error: "active transaction already holds metal security deposit" });
     }
 
+    const beneficiary = await User.findById(beneficiary_id).select("city region_id").lean();
+    if (!beneficiary) {
+      return res.status(404).json({ error: "beneficiary user not found" });
+    }
+
+    const normalizedCity =
+      (typeof city === "string" && city.trim()) ||
+      (typeof region_id === "string" && region_id.trim()) ||
+      beneficiary.city ||
+      beneficiary.region_id ||
+      null;
+
     const tx = await Transaction.create({
       beneficiary_id,
       contributor_id: contributor_id || null,
-      region_id: region_id || null,
+      city: normalizedCity,
+      region_id: normalizedCity,
       status: "PAID_IN_ESCROW",
       escrow: {
         gas_value_deposited: 950.0,
         metal_security_deposit: 2000.0,
         service_fee: 150.0,
       },
+      contributor_acknowledgement: contributor_id
+        ? {
+            status: "PENDING",
+            message:
+              "Escrow has been locked for your listing. A technician will verify and continue the handover process.",
+            sent_at: new Date(),
+            acknowledged_at: null,
+          }
+        : {
+            status: null,
+            message: null,
+            sent_at: null,
+            acknowledged_at: null,
+          },
     });
 
     return res.status(201).json({ transaction: tx });

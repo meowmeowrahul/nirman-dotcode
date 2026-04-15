@@ -21,6 +21,11 @@ const transactionSchema = new Schema(
       ref: "User",
       default: null,
     },
+    city: {
+      type: String,
+      default: null,
+      index: true,
+    },
     region_id: {
       type: String,
       default: null,
@@ -77,6 +82,25 @@ const transactionSchema = new Schema(
       },
       safety_passed: {
         type: Boolean,
+        default: null,
+      },
+    },
+    contributor_acknowledgement: {
+      status: {
+        type: String,
+        enum: ["PENDING", "ACKNOWLEDGED"],
+        default: null,
+      },
+      message: {
+        type: String,
+        default: null,
+      },
+      sent_at: {
+        type: Date,
+        default: null,
+      },
+      acknowledged_at: {
+        type: Date,
         default: null,
       },
     },

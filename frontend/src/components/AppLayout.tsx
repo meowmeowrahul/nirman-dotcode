@@ -24,6 +24,7 @@ const navByRole: Record<Role, NavItem[]> = {
 export function AppLayout() {
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
+  const city = useAuthStore((state) => state.city);
   const logout = useAuthStore((state) => state.logout);
   const userStatus = useTransactionStore((state) => state.userStatus);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -80,7 +81,7 @@ export function AppLayout() {
             }}
           >
             <MapPin size={16} color="#F97316" />
-            <span style={{ fontWeight: 500 }}>Kothrud Region, Pune</span>
+            <span style={{ fontWeight: 500 }}>{city || "City not set"}</span>
           </div>
         </div>
 

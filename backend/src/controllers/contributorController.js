@@ -35,8 +35,14 @@ async function listContributor(req, res, next) {
       };
     }
 
-    if (typeof req.body.region_id === "string" && req.body.region_id.trim()) {
-      update.region_id = req.body.region_id.trim();
+    const city =
+      (typeof req.body.city === "string" && req.body.city.trim()) ||
+      (typeof req.body.region_id === "string" && req.body.region_id.trim()) ||
+      null;
+
+    if (city) {
+      update.city = city;
+      update.region_id = city;
     }
 
     const user = await User.findByIdAndUpdate(userId, { $set: update }, { new: true });

@@ -7,6 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../../api/endpoints";
 import { getApiErrorMessage } from "../../api/error";
 import type { Role } from "../../types/domain";
+import { SUPPORTED_CITIES } from "../../constants/cities";
 import {
   User,
   Lock,
@@ -25,7 +26,7 @@ const registerSchema = z
     name: z.string().trim().min(2, "Full name is required"),
     identity: z.string().trim().min(3, "Enter valid mobile or email"),
     password: z.string().min(1, "Password is required"),
-    region_id: z.string().trim().optional(),
+    city: z.string().trim().min(1, "City is required"),
     omc_id: z.string().trim().optional(),
     locationLat: z.coerce.number().optional(),
     locationLng: z.coerce.number().optional(),
@@ -64,7 +65,7 @@ export function RegisterPage() {
       name: "",
       identity: "",
       password: "",
-      region_id: "",
+      city: "",
       omc_id: "",
     },
   });
@@ -92,6 +93,7 @@ export function RegisterPage() {
       email?: string;
       phone?: string;
       password: string;
+      city?: string;
       region_id?: string;
       kyc?: { omc_id?: string; masked_aadhar?: string };
       location?: { type: "Point"; coordinates: [number, number] };
@@ -101,11 +103,9 @@ export function RegisterPage() {
       email: isEmail ? values.identity : undefined,
       phone: !isEmail ? values.identity : undefined,
       password: values.password,
+      city: values.city,
+      region_id: values.city,
     };
-
-    if (values.region_id) {
-      payload.region_id = values.region_id;
-    }
 
     if (values.omc_id) {
       payload.kyc = {
@@ -257,22 +257,25 @@ export function RegisterPage() {
             )}
           </div>
 
-          {(role === "TECHNICIAN" || role === "WARDEN") && (
-            <div className="auth-form-group">
-              <div className="auth-label-row">
-                <label className="auth-label">REGION ID</label>
-              </div>
-              <div className="auth-input-wrap">
-                <MapPin size={18} className="auth-input-icon" />
-                <input
-                  type="text"
-                  {...register("region_id")}
-                  className="auth-input"
-                  placeholder="e.g. R-01"
-                />
-              </div>
+          <div className="auth-form-group">
+            <div className="auth-label-row">
+              <label className="auth-label">CITY</label>
             </div>
-          )}
+            <div className="auth-input-wrap">
+              <MapPin size={18} className="auth-input-icon" />
+              <select {...register("city")} className="auth-input">
+                <option value="">Select your city</option>
+                {SUPPORTED_CITIES.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {errors.city && (
+              <span className="auth-error">{errors.city.message}</span>
+            )}
+          </div>
 
           {role === "BENEFICIARY" && (
             <div className="auth-form-group">

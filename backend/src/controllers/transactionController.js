@@ -24,7 +24,7 @@ async function getSummary(req, res, next) {
 
     const tx = await Transaction.findById(transactionId).populate(
       "technician_id",
-      "email phone region_id"
+      "email phone city region_id"
     );
 
     if (!tx) {
@@ -100,14 +100,50 @@ async function acknowledgeReturn(req, res, next) {
   }
 }
 
-async function listRegionalActivity(req, res, next) {
+async function acknowledgeContributorLock(req, res, next) {
   try {
-    const regionId = req.user.region_id;
-    if (!regionId) {
-      return res.status(400).json({ error: "missing region in token" });
+    const { transactionId } = req.params;
+    if (!validateObjectId(transactionId)) {
+      return res.status(400).json({ error: "valid transactionId is required" });
     }
 
-    const rows = await Transaction.find({ region_id: regionId })
+    const tx = await Transaction.findById(transactionId);
+    if (!tx) {
+      return res.status(404).json({ error: "transaction not found" });
+    }
+
+    if (!tx.contributor_id || String(tx.contributor_id) !== String(req.user.userId)) {
+      return res.status(403).json({ error: "forbidden" });
+    }
+
+    tx.contributor_acknowledgement = {
+      ...(tx.contributor_acknowledgement || {}),
+      status: "ACKNOWLEDGED",
+      acknowledged_at: new Date(),
+    };
+
+    await tx.save();
+
+    return res.status(200).json({
+      success: true,
+      transaction_id: String(tx._id),
+      contributor_acknowledgement: tx.contributor_acknowledgement,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listRegionalActivity(req, res, next) {
+  try {
+    const city = req.user.city || req.user.region_id;
+    if (!city) {
+      return res.status(400).json({ error: "missing city in token" });
+    }
+
+    const rows = await Transaction.find({
+      $or: [{ city }, { region_id: city }],
+    })
       .sort({ updatedAt: -1 })
       .limit(50)
       .populate("technician_id", "email phone")
@@ -124,7 +160,8 @@ async function listRegionalActivity(req, res, next) {
 
       return {
         id: String(tx._id),
-        region: tx.region_id || "N/A",
+        city: tx.city || tx.region_id || "N/A",
+        region: tx.city || tx.region_id || "N/A",
         technicianName:
           tx.technician_id?.email || tx.technician_id?.phone || "Unassigned",
         manualWeightKg: manualWeight,
@@ -142,5 +179,6 @@ async function listRegionalActivity(req, res, next) {
 module.exports = {
   getSummary,
   acknowledgeReturn,
+  acknowledgeContributorLock,
   listRegionalActivity,
 };

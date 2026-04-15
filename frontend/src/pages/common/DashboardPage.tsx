@@ -9,8 +9,9 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  acknowledgeContributorLock,
   getComplaints,
   getLiveMapData,
   getPendingKycForms,
@@ -58,8 +59,10 @@ function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
 }
 
 export function DashboardPage() {
+  const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role);
   const userId = useAuthStore((state) => state.userId);
+  const city = useAuthStore((state) => state.city);
   const regionId = useAuthStore((state) => state.regionId);
   const username = useAuthStore((state) => state.username);
   const kycStatus = useAuthStore((state) => state.kycStatus);
@@ -84,8 +87,8 @@ export function DashboardPage() {
   });
 
   const { data: mapData } = useQuery({
-    queryKey: ["liveMap", regionId],
-    queryFn: () => getLiveMapData(regionId || undefined),
+    queryKey: ["liveMap", city],
+    queryFn: () => getLiveMapData(city || undefined),
   });
 
   const {
@@ -93,7 +96,7 @@ export function DashboardPage() {
     isLoading: regionalActivityLoading,
     error: regionalActivityError,
   } = useQuery({
-    queryKey: ["wardenRegionalActivity", regionId],
+    queryKey: ["wardenRegionalActivity", city],
     queryFn: getRegionalActivity,
     enabled: role === "WARDEN",
   });
@@ -114,8 +117,8 @@ export function DashboardPage() {
     isLoading: pendingKycLoading,
     error: pendingKycError,
   } = useQuery({
-    queryKey: ["pendingKycForms", regionId],
-    queryFn: () => getPendingKycForms(regionId || undefined),
+    queryKey: ["pendingKycForms", city],
+    queryFn: () => getPendingKycForms(city || undefined),
     enabled: role === "WARDEN" && wardenTab === "VERIFICATION",
     retry: false,
   });
@@ -139,8 +142,8 @@ export function DashboardPage() {
     isLoading: technicianLoading,
     error: technicianError,
   } = useQuery({
-    queryKey: ["technicianAvailability", regionId],
-    queryFn: () => getTechnicianAvailability(regionId || undefined),
+    queryKey: ["technicianAvailability", city],
+    queryFn: () => getTechnicianAvailability(city || undefined),
     enabled: role === "WARDEN" && wardenTab === "TECHNICIANS",
     retry: false,
   });
@@ -151,8 +154,8 @@ export function DashboardPage() {
     error: complaintError,
     refetch: refetchComplaints,
   } = useQuery({
-    queryKey: ["complaints", regionId],
-    queryFn: () => getComplaints({ region_id: regionId || undefined }),
+    queryKey: ["complaints", city],
+    queryFn: () => getComplaints({ city: city || undefined }),
     enabled: role === "WARDEN" && wardenTab === "COMPLAINTS",
     retry: false,
   });
@@ -162,6 +165,13 @@ export function DashboardPage() {
       updateComplaintStatus(complaintId, "UNDER_REVIEW"),
     onSuccess: async () => {
       await refetchComplaints();
+    },
+  });
+
+  const contributorAckMutation = useMutation({
+    mutationFn: acknowledgeContributorLock,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["transactions", userId] });
     },
   });
 
@@ -217,7 +227,7 @@ export function DashboardPage() {
       await activateListingMutation.mutateAsync({
         lat: coords?.lat,
         lng: coords?.lng,
-        region_id: regionId || undefined,
+        city: city || regionId || undefined,
       });
     } catch (error) {
       setUserStatus("IDLE");
@@ -400,6 +410,50 @@ export function DashboardPage() {
             />
           )}
 
+        {role === "CONTRIBUTOR" &&
+          txData?.transactions?.some(
+            (tx: any) => tx.contributor_acknowledgement?.status === "PENDING",
+          ) && (
+            <section className="card stack" style={{ padding: "1rem" }}>
+              <h3 style={{ marginTop: 0 }}>Escrow Lock Acknowledgements</h3>
+              {txData.transactions
+                .filter(
+                  (tx: any) =>
+                    tx.contributor_acknowledgement?.status === "PENDING" &&
+                    tx.contributor?.id === userId,
+                )
+                .map((tx: any) => (
+                  <div
+                    key={`ack-${tx.id}`}
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 8,
+                      padding: "0.85rem",
+                      marginBottom: "0.75rem",
+                    }}
+                  >
+                    <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>
+                      {tx.contributor_acknowledgement?.message ||
+                        "Escrow has been locked for your listing."}
+                    </p>
+                    <p className="mono" style={{ marginTop: 0 }}>
+                      Transaction ID: {tx.id}
+                    </p>
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() => contributorAckMutation.mutate(tx.id)}
+                      disabled={contributorAckMutation.isPending}
+                    >
+                      {contributorAckMutation.isPending
+                        ? "Acknowledging..."
+                        : "Acknowledge lock"}
+                    </button>
+                  </div>
+                ))}
+            </section>
+          )}
+
         <section
           className="dashboard-stats"
           style={{
@@ -511,7 +565,7 @@ export function DashboardPage() {
                               color: "#666",
                             }}
                           >
-                            {timeAgo} • {tx.region_id || "Local Hub"}
+                            {timeAgo} • {tx.city || tx.region_id || "Local Hub"}
                           </p>
                         </div>
                       </div>
@@ -1214,7 +1268,7 @@ export function DashboardPage() {
                             opacity: 0.7,
                           }}
                         >
-                          Region: {item.region_id || "N/A"}
+                          City: {item.city || item.region_id || "N/A"}
                         </button>
                       </div>
                     ))
@@ -1473,7 +1527,7 @@ export function DashboardPage() {
         </div>
         <div>
           <p className="muted-text">Region ID</p>
-          <p className="mono">{regionId || "N/A"}</p>
+          <p className="mono">{city || regionId || "N/A"}</p>
         </div>
       </div>
     </section>

@@ -40,6 +40,7 @@ function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
         role: 1,
         email: 1,
         phone: 1,
+        city: 1,
         region_id: 1,
         location: 1,
         "kyc.status": 1,
@@ -97,6 +98,7 @@ function buildRelaxedPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) 
         role: 1,
         email: 1,
         phone: 1,
+        city: 1,
         region_id: 1,
         location: 1,
         "kyc.status": 1,
@@ -140,12 +142,13 @@ function mapListedContributor(user) {
     role: user.role,
     email: user.email,
     phone: user.phone,
+    city: user.city || user.region_id || null,
     region_id: user.region_id,
     location: user.location,
   };
 }
 
-async function runListedFallback({ regionId, requesterUserId }) {
+async function runListedFallback({ city, requesterUserId }) {
   const baseFilter = {
     role: "CONTRIBUTOR",
     "contributor_listing.status": "LISTED",
@@ -155,13 +158,13 @@ async function runListedFallback({ regionId, requesterUserId }) {
     baseFilter._id = { $ne: new mongoose.Types.ObjectId(requesterUserId) };
   }
 
-  const regionFilter = regionId ? { ...baseFilter, region_id: regionId } : null;
+  const regionFilter = city ? { ...baseFilter, $or: [{ city }, { region_id: city }] } : null;
 
   if (regionFilter) {
     const regional = await User.find(regionFilter)
       .sort({ "contributor_listing.listed_at": -1, updatedAt: -1 })
       .limit(MAX_RESULTS)
-      .select("role email phone region_id location")
+      .select("role email phone city region_id location")
       .lean();
 
     if (regional.length > 0) {
@@ -172,7 +175,7 @@ async function runListedFallback({ regionId, requesterUserId }) {
   const global = await User.find(baseFilter)
     .sort({ "contributor_listing.listed_at": -1, updatedAt: -1 })
     .limit(MAX_RESULTS)
-    .select("role email phone region_id location")
+    .select("role email phone city region_id location")
     .lean();
 
   return global.map(mapListedContributor);
@@ -185,7 +188,7 @@ function getSearchPhases(urgencyScore) {
   return [500, 2000, 5000];
 }
 
-async function rippleSearch({ lat, lng, urgencyScore, regionId, requesterUserId }) {
+async function rippleSearch({ lat, lng, urgencyScore, city, requesterUserId }) {
   const phases = getSearchPhases(urgencyScore);
 
   for (const radius of phases) {
@@ -213,7 +216,7 @@ async function rippleSearch({ lat, lng, urgencyScore, regionId, requesterUserId 
     }
   }
 
-  return runListedFallback({ regionId, requesterUserId });
+  return runListedFallback({ city, requesterUserId });
 }
 
 module.exports = {

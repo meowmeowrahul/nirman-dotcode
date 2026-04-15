@@ -1,7 +1,7 @@
 const User = require("../../src/models/User");
 const { setupTestDb, teardownTestDb, clearDb } = require("../helpers/db");
 
-describe("Schema Edge Case - WARDEN requires region_id", () => {
+describe("Schema Edge Case - WARDEN requires city", () => {
   beforeAll(async () => {
     await setupTestDb();
   });
@@ -14,7 +14,7 @@ describe("Schema Edge Case - WARDEN requires region_id", () => {
     await clearDb();
   });
 
-  test("throws validation error when region_id is missing", async () => {
+  test("throws validation error when city is missing", async () => {
     await expect(
       User.create({
         role: "WARDEN",
@@ -26,6 +26,6 @@ describe("Schema Edge Case - WARDEN requires region_id", () => {
         },
         location: { type: "Point", coordinates: [77.2, 28.6] },
       })
-    ).rejects.toThrow(/region_id/i);
+    ).rejects.toThrow(/city/i);
   });
 });

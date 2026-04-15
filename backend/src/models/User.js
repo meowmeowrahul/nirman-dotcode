@@ -49,11 +49,17 @@ const userSchema = new Schema(
         type: String,
       },
     },
-    region_id: {
+    city: {
       type: String,
-      required: function requiredRegion() {
+      trim: true,
+      default: null,
+      required: function requiredCity() {
         return ["TECHNICIAN", "WARDEN"].includes(this.role);
       },
+    },
+    region_id: {
+      type: String,
+      required: false,
     },
     technician_availability: {
       status: {
@@ -116,6 +122,14 @@ userSchema.pre("validate", function validateContact(next) {
     } else if (this.phone) {
       this.name = this.phone;
     }
+  }
+
+  if (!this.city && this.region_id) {
+    this.city = this.region_id;
+  }
+
+  if (!this.region_id && this.city) {
+    this.region_id = this.city;
   }
 
   next();

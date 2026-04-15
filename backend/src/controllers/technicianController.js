@@ -2,16 +2,16 @@ const User = require("../models/User");
 
 async function listTechnicianAvailability(req, res, next) {
   try {
-    const regionId = req.query.region_id || req.user.region_id || null;
+    const city = req.query.city || req.query.region_id || req.user.city || req.user.region_id || null;
 
     const filter = { role: "TECHNICIAN" };
-    if (regionId) {
-      filter.region_id = regionId;
+    if (city) {
+      filter.city = city;
     }
 
     const rows = await User.find(filter)
       .sort({ updatedAt: -1 })
-      .select("name phone region_id technician_availability")
+      .select("name phone city region_id technician_availability")
       .lean();
 
     const technicians = rows.map((tech) => ({
@@ -23,7 +23,8 @@ async function listTechnicianAvailability(req, res, next) {
           ? tech.technician_availability.rating
           : null,
       status: tech.technician_availability?.status || "AVAILABLE",
-      region_id: tech.region_id || null,
+      city: tech.city || tech.region_id || null,
+      region_id: tech.region_id || tech.city || null,
     }));
 
     return res.status(200).json({ technicians });

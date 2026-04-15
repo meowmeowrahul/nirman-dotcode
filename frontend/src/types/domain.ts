@@ -7,6 +7,7 @@ export type UserStatus = "IDLE" | "ACTIVE_CONTRIBUTOR" | "ACTIVE_BENEFICIARY";
 export interface JwtPayload {
   userId: string;
   role: Role;
+  city?: string | null;
   region_id: string | null;
   name?: string;
   username?: string;
@@ -21,6 +22,7 @@ export interface User {
   name?: string;
   email?: string;
   phone?: string;
+  city?: string | null;
   region_id?: string | null;
   kyc?: {
     status: KycStatus;
@@ -35,6 +37,7 @@ export interface Transaction {
   _id: string;
   beneficiary_id: string;
   technician_id?: string | null;
+  city?: string | null;
   region_id?: string | null;
   status:
     | "PAID_IN_ESCROW"
@@ -56,6 +59,12 @@ export interface Transaction {
     actual_gas_kg?: number | null;
     safety_passed?: boolean | null;
   };
+  contributor_acknowledgement?: {
+    status?: "PENDING" | "ACKNOWLEDGED" | null;
+    message?: string | null;
+    sent_at?: string | null;
+    acknowledged_at?: string | null;
+  };
   createdAt?: string;
   updatedAt?: string;
 }
@@ -63,6 +72,7 @@ export interface Transaction {
 export interface UserTransactionView {
   id: string;
   status: Transaction["status"];
+  city?: string | null;
   region_id?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -78,6 +88,12 @@ export interface UserTransactionView {
     email?: string | null;
     phone?: string | null;
   } | null;
+  contributor_acknowledgement?: {
+    status?: "PENDING" | "ACKNOWLEDGED" | null;
+    message?: string | null;
+    sent_at?: string | null;
+    acknowledged_at?: string | null;
+  } | null;
 }
 
 export interface Contributor {
@@ -85,6 +101,7 @@ export interface Contributor {
   role: Role;
   email?: string;
   phone?: string;
+  city?: string;
   location?: {
     type: "Point";
     coordinates: [number, number];

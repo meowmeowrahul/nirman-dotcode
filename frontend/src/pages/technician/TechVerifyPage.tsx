@@ -10,6 +10,7 @@ import { useTransactionStore } from "../../store/transactionStore";
 
 const verifySchema = z.object({
   transactionId: z.string().min(1, "Transaction ID is required"),
+  beneficiary_user_id: z.string().min(1, "Beneficiary user ID is required"),
   serial_number: z.string().min(1, "Serial number is required"),
   physical_weight: z.coerce.number(),
   tare_weight: z.coerce.number().min(14).max(17),
@@ -41,6 +42,7 @@ export function TechVerifyPage() {
   const verifyMutation = useMutation({
     mutationFn: ({ transactionId, ...payload }: VerifyOutputValues) =>
       verifyTransaction(transactionId, {
+        beneficiary_user_id: payload.beneficiary_user_id,
         serial_number: payload.serial_number,
         physical_weight: payload.physical_weight,
         tare_weight: payload.tare_weight,
@@ -74,15 +76,23 @@ export function TechVerifyPage() {
 
       {isRegionMismatch && (
         <div className="error-panel">
-          <h3>Region mismatch lockout</h3>
+          <h3>City mismatch lockout</h3>
           <p className="muted-text">
-            This transaction cannot be edited because your technician region
+            This transaction cannot be edited because your technician city
             does not match.
           </p>
         </div>
       )}
 
       <form className="stack" onSubmit={handleSubmit(onSubmit)}>
+        <label className="field">
+          <span>Beneficiary User ID</span>
+          <input {...register("beneficiary_user_id")} disabled={isRegionMismatch} />
+          {errors.beneficiary_user_id && (
+            <small className="error-text">{errors.beneficiary_user_id.message}</small>
+          )}
+        </label>
+
         <label className="field">
           <span>Transaction ID</span>
           <input {...register("transactionId")} disabled={isRegionMismatch} />

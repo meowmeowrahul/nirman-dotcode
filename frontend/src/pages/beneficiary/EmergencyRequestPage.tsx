@@ -15,7 +15,7 @@ interface Coordinates {
 
 export function EmergencyRequestPage() {
   const userId = useAuthStore((state) => state.userId);
-  const regionId = useAuthStore((state) => state.regionId);
+  const city = useAuthStore((state) => state.city);
   const setUserStatus = useTransactionStore((state) => state.setUserStatus);
   const setActiveTransaction = useTransactionStore((state) => state.setActiveTransaction);
 
@@ -105,7 +105,7 @@ export function EmergencyRequestPage() {
       lat: coords.lat,
       lng: coords.lng,
       urgency_score: urgencyScore,
-      region_id: regionId || undefined,
+      city: city || undefined,
       requester_user_id: userId || undefined,
     });
   };

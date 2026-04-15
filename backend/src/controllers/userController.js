@@ -205,7 +205,7 @@ async function getKycFormForWarden(req, res, next) {
     }
 
     const form = await KycForm.findOne({ user_id: userId })
-      .populate("user_id", "name role email phone region_id kyc.status")
+      .populate("user_id", "name role email phone city region_id kyc.status")
       .lean();
 
     if (!form) {
@@ -222,6 +222,7 @@ async function getKycFormForWarden(req, res, next) {
               role: form.user_id.role,
               email: form.user_id.email || null,
               phone: form.user_id.phone || null,
+              city: form.user_id.city || form.user_id.region_id || null,
               region_id: form.user_id.region_id || null,
               kyc_status: form.user_id.kyc && form.user_id.kyc.status ? form.user_id.kyc.status : null,
             }
@@ -241,11 +242,11 @@ async function getKycFormForWarden(req, res, next) {
 
 async function listPendingKycForms(req, res, next) {
   try {
-    const regionId = req.query.region_id || req.user.region_id || null;
+    const city = req.query.city || req.query.region_id || req.user.city || req.user.region_id || null;
 
     const forms = await KycForm.find()
       .sort({ submitted_at: -1 })
-      .populate("user_id", "name region_id kyc.status")
+      .populate("user_id", "name city region_id kyc.status")
       .lean();
 
     const items = forms
@@ -260,7 +261,8 @@ async function listPendingKycForms(req, res, next) {
           return false;
         }
 
-        if (regionId && user.region_id !== regionId) {
+        const userCity = user.city || user.region_id || null;
+        if (city && userCity !== city) {
           return false;
         }
 
@@ -311,6 +313,7 @@ async function listUserTransactions(req, res, next) {
     const transactions = rows.map((tx) => ({
       id: String(tx._id),
       status: tx.status,
+      city: tx.city || tx.region_id || null,
       region_id: tx.region_id || null,
       created_at: tx.createdAt,
       updated_at: tx.updatedAt,
@@ -346,6 +349,7 @@ async function listUserTransactions(req, res, next) {
         refund_to_beneficiary: tx.escrow.refund_to_beneficiary,
       },
       cylinder_evidence: tx.cylinder_evidence || null,
+      contributor_acknowledgement: tx.contributor_acknowledgement || null,
     }));
 
     return res.status(200).json({ transactions });

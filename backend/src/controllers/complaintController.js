@@ -9,7 +9,7 @@ function isValidObjectId(id) {
 
 async function listComplaints(req, res, next) {
   try {
-    const regionId = req.query.region_id || req.user.region_id || null;
+    const city = req.query.city || req.query.region_id || req.user.city || req.user.region_id || null;
     const status = req.query.status || null;
 
     if (status && !ALLOWED_STATUSES.includes(status)) {
@@ -17,8 +17,8 @@ async function listComplaints(req, res, next) {
     }
 
     const filter = {};
-    if (regionId) {
-      filter.region_id = regionId;
+    if (city) {
+      filter.region_id = city;
     }
     if (status) {
       filter.status = status;

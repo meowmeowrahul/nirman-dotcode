@@ -12,6 +12,7 @@ interface RegisterBody {
   email?: string;
   phone?: string;
   password: string;
+  city?: string;
   region_id?: string;
   kyc?: {
     omc_id?: string;
@@ -43,6 +44,7 @@ export async function rippleSearch(payload: {
   lat: number;
   lng: number;
   urgency_score: number;
+  city?: string;
   region_id?: string;
   requester_user_id?: string;
 }) {
@@ -53,6 +55,7 @@ export async function rippleSearch(payload: {
 export async function lockEscrow(payload: {
   beneficiary_id: string;
   contributor_id?: string;
+  city?: string;
   region_id?: string;
 }) {
   const response = await api.post<{ transaction: Transaction }>(
@@ -72,6 +75,7 @@ export async function updateMyLocation(payload: { lat: number; lng: number }) {
 export async function activateContributorListing(payload: {
   lat?: number;
   lng?: number;
+  city?: string;
   region_id?: string;
 }) {
   const response = await api.post<{
@@ -105,6 +109,7 @@ export async function releaseEscrow(payload: {
 export async function verifyTransaction(
   transactionId: string,
   payload: {
+    beneficiary_user_id: string;
     serial_number: string;
     physical_weight: number;
     tare_weight: number;
@@ -144,13 +149,14 @@ export async function getLiveMapData(regionId?: string) {
     active_requests: any[];
     available_contributors: any[];
   }>(`/search/live-map`, {
-    params: { region_id: regionId },
+    params: { city: regionId },
   });
   return response.data;
 }
 
 export interface RegionalActivityItem {
   id: string;
+  city: string;
   region: string;
   technicianName: string;
   manualWeightKg: number;
@@ -173,6 +179,7 @@ export interface WardenKycForm {
     role: User["role"];
     email: string | null;
     phone: string | null;
+    city: string | null;
     region_id: string | null;
     kyc_status: KycStatus | null;
   } | null;
@@ -211,7 +218,7 @@ export async function getPendingKycForms(regionId?: string) {
   const response = await api.get<{ items: PendingKycItem[] }>(
     "/users/kyc-form/pending",
     {
-      params: { region_id: regionId },
+      params: { city: regionId },
     },
   );
   return response.data;
@@ -223,6 +230,7 @@ export interface TechnicianAvailabilityItem {
   phone: string | null;
   rating: number | null;
   status: "AVAILABLE" | "BUSY" | "OFFLINE" | string;
+  city: string | null;
   region_id: string | null;
 }
 
@@ -230,9 +238,21 @@ export async function getTechnicianAvailability(regionId?: string) {
   const response = await api.get<{ technicians: TechnicianAvailabilityItem[] }>(
     "/technicians/availability",
     {
-      params: { region_id: regionId },
+      params: { city: regionId },
     },
   );
+  return response.data;
+}
+
+export async function acknowledgeContributorLock(transactionId: string) {
+  const response = await api.patch<{
+    success: boolean;
+    transaction_id: string;
+    contributor_acknowledgement: {
+      status: "ACKNOWLEDGED";
+      acknowledged_at: string;
+    };
+  }>(`/transactions/${transactionId}/contributor-acknowledge`);
   return response.data;
 }
 
@@ -247,6 +267,7 @@ export interface ComplaintItem {
 }
 
 export async function getComplaints(params?: {
+  city?: string;
   region_id?: string;
   status?: "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "REJECTED";
 }) {

@@ -8,6 +8,7 @@ interface AuthState {
   token: string | null;
   role: Role | null;
   userId: string | null;
+  city: string | null;
   regionId: string | null;
   username: string | null;
   kycStatus: KycStatus | null;
@@ -21,6 +22,7 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       role: null,
       userId: null,
+      city: null,
       regionId: null,
       username: null,
       kycStatus: null,
@@ -34,7 +36,8 @@ export const useAuthStore = create<AuthState>()(
           token,
           role: payload.role,
           userId: payload.userId,
-          regionId: payload.region_id,
+          city: payload.city ?? payload.region_id ?? null,
+          regionId: payload.region_id ?? payload.city ?? null,
           username: payload.name ?? payload.username ?? null,
           kycStatus: payload.kyc_status ?? null,
         });
@@ -48,6 +51,7 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           role: null,
           userId: null,
+          city: null,
           regionId: null,
           username: null,
           kycStatus: null,

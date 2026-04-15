@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
+const User = require("../models/User");
 const escrowFinanceService = require("../services/escrowFinanceService");
 
 const MIN_TARE_KG = 14.0;
@@ -13,14 +14,14 @@ function isFiniteNumber(value) {
   return Number.isFinite(Number(value));
 }
 
-function hasMatchingRegion(transactionRegion, technicianRegion) {
-  return Boolean(transactionRegion) && Boolean(technicianRegion) && transactionRegion === technicianRegion;
+function hasMatchingCity(transactionCity, technicianCity) {
+  return Boolean(transactionCity) && Boolean(technicianCity) && transactionCity === technicianCity;
 }
 
 async function verifyTransaction(req, res, next) {
   try {
     const { transactionId } = req.params;
-    const { serial_number, physical_weight, tare_weight, safety_passed } = req.body;
+    const { beneficiary_user_id, serial_number, physical_weight, tare_weight, safety_passed } = req.body;
 
     if (!validateObjectId(transactionId)) {
       return res.status(400).json({ error: "valid transactionId is required" });
@@ -28,6 +29,10 @@ async function verifyTransaction(req, res, next) {
 
     if (typeof serial_number !== "string" || serial_number.trim() === "") {
       return res.status(400).json({ error: "serial_number is required" });
+    }
+
+    if (beneficiary_user_id !== undefined && !validateObjectId(beneficiary_user_id)) {
+      return res.status(400).json({ error: "beneficiary_user_id must be a valid ObjectId" });
     }
 
     if (!isFiniteNumber(physical_weight) || !isFiniteNumber(tare_weight)) {
@@ -50,9 +55,25 @@ async function verifyTransaction(req, res, next) {
       return res.status(404).json({ error: "transaction not found" });
     }
 
-    if (!hasMatchingRegion(tx.region_id, req.user.region_id)) {
+    if (
+      beneficiary_user_id !== undefined &&
+      String(tx.beneficiary_id) !== String(beneficiary_user_id)
+    ) {
+      return res.status(409).json({ error: "beneficiary_user_id does not match transaction beneficiary" });
+    }
+
+    const beneficiary = await User.findById(tx.beneficiary_id).select("city region_id").lean();
+    const beneficiaryCity = beneficiary
+      ? beneficiary.city || beneficiary.region_id || null
+      : tx.city || tx.region_id || null;
+    const technicianCity = req.user.city || req.user.region_id || null;
+
+    if (!hasMatchingCity(beneficiaryCity, technicianCity)) {
       return res.status(403).json({ error: "forbidden: region mismatch" });
     }
+
+    tx.city = tx.city || beneficiaryCity;
+    tx.region_id = tx.region_id || beneficiaryCity;
 
     if (tx.status !== "PAID_IN_ESCROW") {
       return res.status(400).json({ error: "invalid state transition: verify requires PAID_IN_ESCROW" });
@@ -117,7 +138,8 @@ async function handoverTransaction(req, res, next) {
       return res.status(404).json({ error: "transaction not found" });
     }
 
-    if (!hasMatchingRegion(tx.region_id, req.user.region_id)) {
+    const technicianCity = req.user.city || req.user.region_id || null;
+    if (!hasMatchingCity(tx.city || tx.region_id, technicianCity)) {
       return res.status(403).json({ error: "forbidden: region mismatch" });
     }
 
