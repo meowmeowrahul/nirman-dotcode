@@ -1,7 +1,12 @@
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
 const User = require("../models/User");
+const Alert = require("../models/Alert");
 const escrowFinanceService = require("../services/escrowFinanceService");
+const {
+  analyzeScaleImageWithGemini,
+  scoreFraudRiskWithGemini,
+} = require("../services/ai.service");
 const {
   createNotificationsByUserFilter,
 } = require("../services/notificationService");
@@ -25,6 +30,75 @@ function hasMatchingCity(transactionCity, technicianCity) {
   );
 }
 
+function decodeBase64Image(imageBase64) {
+  if (typeof imageBase64 !== "string" || imageBase64.trim() === "") {
+    return null;
+  }
+
+  const withoutPrefix = imageBase64.includes(",")
+    ? imageBase64.split(",").pop()
+    : imageBase64;
+
+  try {
+    const buffer = Buffer.from(withoutPrefix, "base64");
+    return buffer.length ? buffer : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function upsertAndEmitWardenAlert(req, {
+  transactionId,
+  riskScore,
+  flags,
+  source,
+  reviewReason,
+  context,
+}) {
+  const alertDoc = await Alert.findOneAndUpdate(
+    {
+      transaction_id: transactionId,
+      alert_type: "FRAUD_GUARD",
+    },
+    {
+      $set: {
+        combined_risk_score: riskScore,
+        flags,
+        source,
+        review_status: "OPEN",
+        review_reason: reviewReason || null,
+        context: context || {},
+      },
+      $setOnInsert: {
+        transaction_id: transactionId,
+        alert_type: "FRAUD_GUARD",
+      },
+    },
+    {
+      upsert: true,
+      new: true,
+      setDefaultsOnInsert: true,
+    },
+  );
+
+  const io = req.app && req.app.get("io");
+  if (io) {
+    io.emit("WARDEN_ALERT", {
+      alert_id: String(alertDoc._id),
+      transaction_id: String(transactionId),
+      combined_risk_score: alertDoc.combined_risk_score,
+      flags: alertDoc.flags,
+      review_status: alertDoc.review_status,
+      review_reason: alertDoc.review_reason,
+      source: alertDoc.source,
+      created_at: alertDoc.createdAt,
+      updated_at: alertDoc.updatedAt,
+    });
+  }
+
+  return alertDoc;
+}
+
 async function verifyTransaction(req, res, next) {
   try {
     const { transactionId } = req.params;
@@ -34,6 +108,9 @@ async function verifyTransaction(req, res, next) {
       physical_weight,
       tare_weight,
       safety_passed,
+      scale_image_base64,
+      scale_image_mime_type,
+      scale_prompt,
     } = req.body;
 
     if (!validateObjectId(transactionId)) {
@@ -120,6 +197,156 @@ async function verifyTransaction(req, res, next) {
     }
 
     tx.technician_id = req.user.userId;
+
+    const imageBuffer = decodeBase64Image(scale_image_base64);
+    let geminiResult = null;
+    let geminiFailure = null;
+
+    if (imageBuffer) {
+      try {
+        geminiResult = await analyzeScaleImageWithGemini({
+          imageBuffer,
+          mimeType: scale_image_mime_type || "image/jpeg",
+          prompt: scale_prompt,
+        });
+      } catch (error) {
+        geminiFailure = error;
+      }
+    } else {
+      geminiFailure = new Error("scale image not provided");
+    }
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const historyRows = await Transaction.find({
+      createdAt: { $gte: thirtyDaysAgo },
+      $or: [
+        { beneficiary_id: tx.beneficiary_id },
+        ...(tx.contributor_id ? [{ contributor_id: tx.contributor_id }] : []),
+        { technician_id: req.user.userId },
+      ],
+    })
+      .select("contributor_id technician_id createdAt status cylinder_evidence")
+      .sort({ createdAt: -1 })
+      .limit(300)
+      .lean();
+
+    const normalizedHistory = historyRows.map((row) => ({
+      transaction_id: String(row._id),
+      contributor_id: row.contributor_id ? String(row.contributor_id) : null,
+      technician_id: row.technician_id ? String(row.technician_id) : null,
+      created_at: row.createdAt,
+      status: row.status,
+      manual_weight_kg:
+        row.cylinder_evidence && Number.isFinite(Number(row.cylinder_evidence.physical_weight))
+          ? Number(row.cylinder_evidence.physical_weight)
+          : null,
+    }));
+
+    const nowTs = Date.now();
+    const pairCount14Days = normalizedHistory.filter((row) => {
+      if (!row.created_at) {
+        return false;
+      }
+      const createdAt = new Date(row.created_at).getTime();
+      return (
+        row.contributor_id &&
+        tx.contributor_id &&
+        row.contributor_id === String(tx.contributor_id) &&
+        row.technician_id === String(req.user.userId) &&
+        createdAt >= nowTs - 14 * 24 * 60 * 60 * 1000
+      );
+    }).length;
+
+    const contributorListings72h = normalizedHistory.filter((row) => {
+      if (!row.created_at) {
+        return false;
+      }
+      const createdAt = new Date(row.created_at).getTime();
+      return (
+        row.contributor_id &&
+        tx.contributor_id &&
+        row.contributor_id === String(tx.contributor_id) &&
+        createdAt >= nowTs - 72 * 60 * 60 * 1000
+      );
+    }).length;
+
+    const manualVsDetectedDiffKg =
+      geminiResult && Number.isFinite(Number(geminiResult.detected_weight_kg))
+        ? Number(Math.abs(physicalWeight - Number(geminiResult.detected_weight_kg)).toFixed(3))
+        : null;
+
+    let fraudGuardResult = null;
+    let fraudGuardFailure = null;
+
+    try {
+      fraudGuardResult = await scoreFraudRiskWithGemini({
+        transactionHistory: normalizedHistory,
+        currentPayload: {
+          transaction_id: String(tx._id),
+          beneficiary_id: String(tx.beneficiary_id),
+          contributor_id: tx.contributor_id ? String(tx.contributor_id) : null,
+          technician_id: String(req.user.userId),
+          manual_weight: physicalWeight,
+          detected_weight: geminiResult ? geminiResult.detected_weight_kg : null,
+          is_cylinder_visible: geminiResult ? geminiResult.is_cylinder_visible : null,
+          rule_metrics: {
+            technician_contributor_pair_count_14d: pairCount14Days,
+            contributor_listings_72h: contributorListings72h,
+            manual_detected_weight_diff_kg: manualVsDetectedDiffKg,
+          },
+          captured_at: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      fraudGuardFailure = error;
+    }
+
+    if (fraudGuardResult && Number(fraudGuardResult.combined_risk_score) > 75) {
+      await upsertAndEmitWardenAlert(req, {
+        transactionId: tx._id,
+        riskScore: Number(fraudGuardResult.combined_risk_score),
+        flags: Array.isArray(fraudGuardResult.flags) ? fraudGuardResult.flags : [],
+        source: "GEMINI_FLASH",
+        reviewReason: "High combined risk score from FraudGuard",
+        context: {
+          gemini_result: geminiResult,
+          manual_weight_kg: physicalWeight,
+          tare_weight_kg: tareWeight,
+          actual_gas_kg: actualGasKg,
+        },
+      });
+    }
+
+    const didGeminiTimeout =
+      (geminiFailure && geminiFailure.code === "AI_TIMEOUT") ||
+      (fraudGuardFailure && fraudGuardFailure.code === "AI_TIMEOUT");
+
+    if (geminiFailure || fraudGuardFailure) {
+      const reasons = [];
+      if (geminiFailure) {
+        reasons.push(`Gemini: ${geminiFailure.message}`);
+      }
+      if (fraudGuardFailure) {
+        reasons.push(`Gemini FraudGuard: ${fraudGuardFailure.message}`);
+      }
+
+      await upsertAndEmitWardenAlert(req, {
+        transactionId: tx._id,
+        riskScore: didGeminiTimeout ? 85 : 76,
+        flags: didGeminiTimeout
+          ? ["MANUAL_WARDEN_REVIEW_REQUIRED", "GEMINI_TIMEOUT"]
+          : ["MANUAL_WARDEN_REVIEW_REQUIRED", "AI_PIPELINE_FAILURE"],
+        source: didGeminiTimeout ? "GEMINI_TIMEOUT_FALLBACK" : "GEMINI_FALLBACK",
+        reviewReason: reasons.join(" | "),
+        context: {
+          gemini_result: geminiResult,
+          manual_weight_kg: physicalWeight,
+          tare_weight_kg: tareWeight,
+          actual_gas_kg: actualGasKg,
+        },
+      });
+    }
+
     tx.cylinder_evidence = {
       serial_number,
       physical_weight: physicalWeight,
@@ -127,6 +354,15 @@ async function verifyTransaction(req, res, next) {
       actual_gas_kg: actualGasKg,
       safety_passed,
     };
+
+    if (didGeminiTimeout) {
+      tx.status = "PENDING_WARDEN_REVIEW";
+      await tx.save();
+      return res.status(202).json({
+        transaction: tx,
+        fallback: "PENDING_WARDEN_REVIEW",
+      });
+    }
 
     if (!safety_passed) {
       tx.status = "CANCELLED";

@@ -10,6 +10,7 @@ const complaintRoutes = require("./routes/complaintRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const contributorRoutes = require("./routes/contributorRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const emergencyRoutes = require("./routes/emergencyRoutes");
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use("/api/complaints", complaintRoutes);
 app.use("/api/transactions", transactionRoutes);
 app.use("/api/contributor", contributorRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/emergency", emergencyRoutes);
 
 app.use((error, _req, res, _next) => {
   if (error && (error.type === "entity.too.large" || error.status === 413)) {
