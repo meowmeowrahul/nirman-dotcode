@@ -167,26 +167,10 @@ export function AppLayout() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "16px",
+            gap: "24px",
             position: "relative",
           }}
         >
-          <div
-            className="status-pill"
-            style={{
-              backgroundColor: "#1E3A8A",
-              color: "#FFFFFF",
-              border: "1px solid #1E3A8A",
-              borderRadius: 4,
-              padding: "6px 10px",
-              fontWeight: 700,
-              fontSize: "0.8rem",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {t("Status")}: {tStatus(userStatus)}
-          </div>
-
           <div ref={langDropdownRef} style={{ position: "relative" }}>
             <button
               className="icon-action-btn"

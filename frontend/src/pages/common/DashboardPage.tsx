@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useTransactionStore } from "../../store/transactionStore";
 import { PageHeader } from "../../components/PageHeader";
@@ -99,6 +100,7 @@ export function DashboardPage() {
   const [complaintCreateError, setComplaintCreateError] = useState<
     string | null
   >(null);
+  const [isComplaintBoxOpen, setIsComplaintBoxOpen] = useState(false);
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", userId],
@@ -727,115 +729,6 @@ export function DashboardPage() {
           </section>
         )}
 
-        {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
-          <section className="card stack" style={{ padding: "1rem" }}>
-            <h3 style={{ marginTop: 0 }}>{t("Complaint Box")}</h3>
-            <p className="muted-text" style={{ marginTop: 0 }}>
-              {t(
-                "Report misconduct or safety issues directly to the warden queue.",
-              )}
-            </p>
-            <div className="stack" style={{ gap: "0.65rem" }}>
-              <label className="field">
-                <span>{t("Accused User ID")}</span>
-                <input
-                  value={complaintAccusedId}
-                  onChange={(event) =>
-                    setComplaintAccusedId(event.target.value)
-                  }
-                  placeholder={t("Enter user ID")}
-                />
-              </label>
-              <label className="field">
-                <span>{t("Category")}</span>
-                <select
-                  value={complaintCategory}
-                  onChange={(event) =>
-                    setComplaintCategory(
-                      event.target.value as
-                        | "OVERPRICING"
-                        | "MISCONDUCT"
-                        | "SAFETY"
-                        | "FRAUD"
-                        | "OTHER",
-                    )
-                  }
-                >
-                  <option value="OVERPRICING">
-                    {tCategory("OVERPRICING")}
-                  </option>
-                  <option value="MISCONDUCT">{tCategory("MISCONDUCT")}</option>
-                  <option value="SAFETY">{tCategory("SAFETY")}</option>
-                  <option value="FRAUD">{tCategory("FRAUD")}</option>
-                  <option value="OTHER">{tCategory("OTHER")}</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>{t("Description")}</span>
-                <textarea
-                  value={complaintDescription}
-                  onChange={(event) =>
-                    setComplaintDescription(event.target.value)
-                  }
-                  rows={3}
-                  placeholder={t("Describe what happened")}
-                />
-              </label>
-            </div>
-            {complaintCreateError && (
-              <p className="error-banner">{complaintCreateError}</p>
-            )}
-            <button
-              type="button"
-              className="primary-btn"
-              onClick={() => {
-                setComplaintCreateError(null);
-                createComplaintMutation.mutate({
-                  accused_user_id: complaintAccusedId.trim(),
-                  category: complaintCategory,
-                  description: complaintDescription.trim(),
-                });
-              }}
-              disabled={createComplaintMutation.isPending}
-            >
-              {createComplaintMutation.isPending
-                ? t("Submitting complaint...")
-                : t("Submit Complaint")}
-            </button>
-
-            <div
-              style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem" }}
-            >
-              <h4 style={{ margin: "0 0 0.5rem 0" }}>
-                {t("My Complaint History")}
-              </h4>
-              {myComplaintsLoading && (
-                <p className="muted-text" style={{ margin: 0 }}>
-                  {t("Loading your complaints...")}
-                </p>
-              )}
-              {!myComplaintsLoading &&
-                (myComplaintData?.complaints?.length ? (
-                  myComplaintData.complaints.slice(0, 5).map((item) => (
-                    <div key={item.id} style={{ marginBottom: "0.55rem" }}>
-                      <p className="mono" style={{ margin: "0 0 0.2rem 0" }}>
-                        #{item.id.slice(-6)} • {tCategory(item.category)} •{" "}
-                        {tStatus(item.status)}
-                      </p>
-                      <p className="muted-text" style={{ margin: 0 }}>
-                        {item.description}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="muted-text" style={{ margin: 0 }}>
-                    {t("No complaints filed yet.")}
-                  </p>
-                ))}
-            </div>
-          </section>
-        )}
-
         <section
           className="dashboard-stats"
           style={{
@@ -1039,6 +932,131 @@ export function DashboardPage() {
             </div>
           </div>
         </section>
+
+        {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
+          <section className="card stack" style={{ padding: "0", overflow: "hidden" }}>
+            <div 
+              style={{ padding: "1rem", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+              onClick={() => setIsComplaintBoxOpen(!isComplaintBoxOpen)}
+            >
+              <div>
+                <h3 style={{ margin: 0 }}>{t("Complaint Box")}</h3>
+                <p className="muted-text" style={{ margin: "0.25rem 0 0 0" }}>
+                  {t("Report misconduct or safety issues directly to the warden queue.")}
+                </p>
+              </div>
+              <button 
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: "0.25rem" }}
+                aria-label={isComplaintBoxOpen ? t("Close") : t("Open")}
+              >
+                {isComplaintBoxOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+              </button>
+            </div>
+            
+            {isComplaintBoxOpen && (
+              <div style={{ padding: "0 1rem 1rem 1rem", marginTop: "-0.5rem" }} className="stack">
+                <div className="stack" style={{ gap: "0.65rem" }}>
+                  <label className="field">
+                    <span>{t("Accused User ID")}</span>
+                    <input
+                      value={complaintAccusedId}
+                      onChange={(event) =>
+                        setComplaintAccusedId(event.target.value)
+                      }
+                      placeholder={t("Enter user ID")}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>{t("Category")}</span>
+                    <select
+                      value={complaintCategory}
+                      onChange={(event) =>
+                        setComplaintCategory(
+                          event.target.value as
+                            | "OVERPRICING"
+                            | "MISCONDUCT"
+                            | "SAFETY"
+                            | "FRAUD"
+                            | "OTHER",
+                        )
+                      }
+                    >
+                      <option value="OVERPRICING">
+                        {tCategory("OVERPRICING")}
+                      </option>
+                      <option value="MISCONDUCT">{tCategory("MISCONDUCT")}</option>
+                      <option value="SAFETY">{tCategory("SAFETY")}</option>
+                      <option value="FRAUD">{tCategory("FRAUD")}</option>
+                      <option value="OTHER">{tCategory("OTHER")}</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>{t("Description")}</span>
+                    <textarea
+                      value={complaintDescription}
+                      onChange={(event) =>
+                        setComplaintDescription(event.target.value)
+                      }
+                      rows={3}
+                      placeholder={t("Describe what happened")}
+                    />
+                  </label>
+                </div>
+                {complaintCreateError && (
+                  <p className="error-banner">{complaintCreateError}</p>
+                )}
+                <button
+                  type="button"
+                  className="primary-btn"
+                  onClick={() => {
+                    setComplaintCreateError(null);
+                    createComplaintMutation.mutate({
+                      accused_user_id: complaintAccusedId.trim(),
+                      category: complaintCategory,
+                      description: complaintDescription.trim(),
+                    });
+                  }}
+                  disabled={createComplaintMutation.isPending}
+                >
+                  {createComplaintMutation.isPending
+                    ? t("Submitting complaint...")
+                    : t("Submit Complaint")}
+                </button>
+
+                <div
+                  style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem", marginTop: "1rem" }}
+                >
+                  <h4 style={{ margin: "0 0 0.5rem 0" }}>
+                    {t("My Complaint History")}
+                  </h4>
+                  {myComplaintsLoading && (
+                    <p className="muted-text" style={{ margin: 0 }}>
+                      {t("Loading your complaints...")}
+                    </p>
+                  )}
+                  {!myComplaintsLoading &&
+                    (myComplaintData?.complaints?.length ? (
+                      myComplaintData.complaints.slice(0, 5).map((item) => (
+                        <div key={item.id} style={{ marginBottom: "0.55rem" }}>
+                          <p className="mono" style={{ margin: "0 0 0.2rem 0" }}>
+                            #{item.id.slice(-6)} • {tCategory(item.category)} •{" "}
+                            {tStatus(item.status)}
+                          </p>
+                          <p className="muted-text" style={{ margin: 0 }}>
+                            {item.description}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="muted-text" style={{ margin: 0 }}>
+                        {t("No complaints filed yet.")}
+                      </p>
+                    ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </div>
     );
   }
