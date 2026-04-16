@@ -162,6 +162,59 @@ npm run dev
 
 Open: `http://localhost:5173`
 
+## Deployment (Vercel Frontend + Render Backend)
+
+### Backend on Render
+
+Create a **Web Service** from the `backend` folder with:
+
+- Build command: `npm install`
+- Start command: `npm start`
+
+Set these environment variables in Render:
+
+```env
+PORT=3000
+MONGO_URI=<your_mongodb_connection_string>
+JWT_SECRET=<long_random_secret>
+CORS_ORIGINS=https://<your-vercel-domain>
+
+# Optional AI integrations
+GEMINI_API_KEY=<optional>
+GEMINI_MODEL=gemini-1.5-flash
+SARVAM_API_URL=<optional>
+SARVAM_API_KEY=<optional>
+AI_TIMEOUT_MS=9000
+```
+
+Notes:
+
+- Add every allowed frontend origin to `CORS_ORIGINS` as a comma-separated list.
+- Include your production Vercel URL and any preview/custom domains if needed.
+
+### Frontend on Vercel
+
+Import the `frontend` folder as a Vercel project.
+
+Set these environment variables in Vercel:
+
+```env
+VITE_API_BASE_URL=https://<your-render-service>.onrender.com/api
+VITE_BACKEND_TARGET=https://<your-render-service>.onrender.com
+```
+
+Recommended framework/build settings:
+
+- Framework Preset: `Vite`
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+### Quick Validation Checklist
+
+- Backend health: open `https://<render-service>.onrender.com/api/auth/login` (method should exist; GET may return 404/405, which confirms routing).
+- Frontend network calls should target your Render domain, not `localhost`.
+- Socket connection should establish to the Render domain.
+
 ## Testing
 
 Backend includes **21 Jest tests** (unit + integration) covering auth, RBAC, escrow math/state, ripple search behavior, KYC, technician pipeline, and regional ops.
