@@ -1,5 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import { submitKycForm } from "../../api/endpoints";
+import { getApiErrorMessage } from "../../api/error";
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Unable to read file as data URL"));
+    };
+    reader.onerror = () => reject(new Error("Unable to read file"));
+    reader.readAsDataURL(file);
+  });
+}
 
 export function KycCompletionPage() {
   const navigate = useNavigate();
@@ -10,6 +28,18 @@ export function KycCompletionPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+
+  const submitKycMutation = useMutation({
+    mutationFn: submitKycForm,
+    onSuccess: () => {
+      setLoading(false);
+      navigate("/profile");
+    },
+    onError: (error) => {
+      setLoading(false);
+      setFormError(getApiErrorMessage(error, "Unable to submit KYC"));
+    },
+  });
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -74,7 +104,7 @@ export function KycCompletionPage() {
     };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -86,11 +116,24 @@ export function KycCompletionPage() {
     }
 
     setLoading(true);
-    // Simulate KYC submission
-    setTimeout(() => {
+
+    try {
+      const [aadharDataUrl, panDataUrl] = await Promise.all([
+        fileToDataUrl(aadharFile),
+        fileToDataUrl(panFile),
+      ]);
+
+      await submitKycMutation.mutateAsync({
+        aadhar_doc_photo: aadharDataUrl,
+        pan_doc_photo: panDataUrl,
+        verification_selfie: selfieImage,
+      });
+    } catch (error) {
       setLoading(false);
-      navigate("/profile");
-    }, 1000);
+      setFormError(
+        getApiErrorMessage(error, "Unable to process KYC documents"),
+      );
+    }
   };
 
   return (

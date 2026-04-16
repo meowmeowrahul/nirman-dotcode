@@ -219,8 +219,8 @@ export function EmergencyRequestPage() {
       <div className="card stack">
         <h2>Step 3: Confirm request and lock escrow</h2>
         <p className="muted-text">
-          Selected contributor is used for confirmation context; backend locks
-          against beneficiary ID.
+          If no contributor is selected, request is still broadcast as a city
+          notification and contributors can accept later.
         </p>
         {selectedContributorId && (
           <p className="mono">Selected contributor: {selectedContributorId}</p>
@@ -230,7 +230,7 @@ export function EmergencyRequestPage() {
           className="primary-btn"
           type="button"
           onClick={confirmAndLock}
-          disabled={contributors.length === 0 || lockMutation.isPending}
+          disabled={lockMutation.isPending}
         >
           {lockMutation.isPending
             ? "Locking escrow..."

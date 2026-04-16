@@ -1,5 +1,6 @@
 const express = require("express");
 const {
+	getMyProfile,
 	updateKycStatus,
 	listUserTransactions,
 	submitKycForm,
@@ -13,6 +14,7 @@ const authorize = require("../middleware/authorize");
 
 const router = express.Router();
 
+router.get("/me", auth, getMyProfile);
 router.patch("/kyc/:id", auth, authorize("WARDEN"), updateKycStatus);
 router.post("/kyc-form", auth, authorize("BENEFICIARY", "CONTRIBUTOR"), submitKycForm);
 router.get("/kyc-form/me", auth, getOwnKycForm);

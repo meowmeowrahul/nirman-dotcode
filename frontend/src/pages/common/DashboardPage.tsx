@@ -12,6 +12,11 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   acknowledgeContributorLock,
+  acceptOpenContributorRequest,
+  createComplaint,
+  getContributorNotifications,
+  getMyComplaints,
+  getMyProfile,
   getComplaints,
   getLiveMapData,
   getPendingKycForms,
@@ -66,6 +71,7 @@ export function DashboardPage() {
   const regionId = useAuthStore((state) => state.regionId);
   const username = useAuthStore((state) => state.username);
   const kycStatus = useAuthStore((state) => state.kycStatus);
+  const setKycStatus = useAuthStore((state) => state.setKycStatus);
   const userStatus = useTransactionStore((state) => state.userStatus);
   const setUserStatus = useTransactionStore((state) => state.setUserStatus);
   const activeTransaction = useTransactionStore((state) => state.activeTransaction);
@@ -79,12 +85,56 @@ export function DashboardPage() {
   const [kycActionError, setKycActionError] = useState<string | null>(null);
   const [listingError, setListingError] = useState<string | null>(null);
   const [listingNotice, setListingNotice] = useState<string | null>(null);
+  const [complaintAccusedId, setComplaintAccusedId] = useState("");
+  const [complaintCategory, setComplaintCategory] = useState<
+    "OVERPRICING" | "MISCONDUCT" | "SAFETY" | "FRAUD" | "OTHER"
+  >("OTHER");
+  const [complaintDescription, setComplaintDescription] = useState("");
+  const [complaintCreateError, setComplaintCreateError] = useState<string | null>(null);
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", userId],
     queryFn: () => getUserTransactions(userId!),
     enabled: !!userId,
+    refetchInterval: 5000,
   });
+
+  const {
+    data: contributorNotificationData,
+    isLoading: contributorNotificationsLoading,
+    error: contributorNotificationsError,
+  } = useQuery({
+    queryKey: ["contributorNotifications", userId],
+    queryFn: getContributorNotifications,
+    enabled: role === "CONTRIBUTOR",
+    refetchInterval: 4000,
+  });
+
+  const {
+    data: myComplaintData,
+    isLoading: myComplaintsLoading,
+    refetch: refetchMyComplaints,
+  } = useQuery({
+    queryKey: ["myComplaints", userId],
+    queryFn: getMyComplaints,
+    enabled: role === "BENEFICIARY" || role === "CONTRIBUTOR",
+  });
+
+  const { data: myProfileData } = useQuery({
+    queryKey: ["myProfile", userId],
+    queryFn: getMyProfile,
+    enabled: !!userId && (role === "BENEFICIARY" || role === "CONTRIBUTOR"),
+    refetchInterval: 5000,
+  });
+
+  useEffect(() => {
+    const liveStatus = myProfileData?.user?.kyc?.status;
+    if (liveStatus) {
+      setKycStatus(liveStatus);
+    }
+  }, [myProfileData, setKycStatus]);
+
+  const effectiveKycStatus = myProfileData?.user?.kyc?.status || kycStatus;
 
   const { data: mapData } = useQuery({
     queryKey: ["liveMap", city],
@@ -171,7 +221,34 @@ export function DashboardPage() {
   const contributorAckMutation = useMutation({
     mutationFn: acknowledgeContributorLock,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["transactions", userId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["transactions", userId] }),
+        queryClient.invalidateQueries({ queryKey: ["contributorNotifications", userId] }),
+      ]);
+    },
+  });
+
+  const acceptRequestMutation = useMutation({
+    mutationFn: acceptOpenContributorRequest,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["contributorNotifications", userId] }),
+        queryClient.invalidateQueries({ queryKey: ["transactions", userId] }),
+      ]);
+    },
+  });
+
+  const createComplaintMutation = useMutation({
+    mutationFn: createComplaint,
+    onSuccess: async () => {
+      setComplaintCreateError(null);
+      setComplaintAccusedId("");
+      setComplaintDescription("");
+      setComplaintCategory("OTHER");
+      await refetchMyComplaints();
+    },
+    onError: (error) => {
+      setComplaintCreateError(getApiErrorMessage(error, "Unable to submit complaint"));
     },
   });
 
@@ -265,15 +342,35 @@ export function DashboardPage() {
             <h1 style={{ margin: "4px 0", fontSize: "2rem" }}>
               Welcome {welcomeName}
             </h1>
-            {kycStatus === "VERIFIED" ? (
+            {effectiveKycStatus === "VERIFIED" ? (
               <StatusChip label="Verified Citizen" tone="success" />
-            ) : kycStatus === "REJECTED" ? (
+            ) : effectiveKycStatus === "REJECTED" ? (
               <StatusChip label="Verification Rejected" tone="error" />
             ) : (
               <StatusChip label="Verification Pending" tone="warning" />
             )}
           </div>
         </header>
+
+        {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
+          <section className="card" style={{ padding: "0.9rem 1rem" }}>
+            {effectiveKycStatus === "VERIFIED" && (
+              <p style={{ margin: 0, color: "#166534", fontWeight: 600 }}>
+                KYC approved by warden. You now have full access.
+              </p>
+            )}
+            {effectiveKycStatus === "REJECTED" && (
+              <p style={{ margin: 0, color: "#b91c1c", fontWeight: 600 }}>
+                KYC rejected by warden. Update your documents and resubmit.
+              </p>
+            )}
+            {effectiveKycStatus === "PENDING" && (
+              <p style={{ margin: 0, color: "#92400e", fontWeight: 600 }}>
+                KYC submitted and awaiting warden review.
+              </p>
+            )}
+          </section>
+        )}
 
         <section
           className="dashboard-actions"
@@ -411,20 +508,16 @@ export function DashboardPage() {
           )}
 
         {role === "CONTRIBUTOR" &&
-          txData?.transactions?.some(
-            (tx: any) => tx.contributor_acknowledgement?.status === "PENDING",
+          contributorNotificationData?.notifications?.some(
+            (item) => item.type === "LOCK_ACK_REQUIRED",
           ) && (
             <section className="card stack" style={{ padding: "1rem" }}>
               <h3 style={{ marginTop: 0 }}>Escrow Lock Acknowledgements</h3>
-              {txData.transactions
-                .filter(
-                  (tx: any) =>
-                    tx.contributor_acknowledgement?.status === "PENDING" &&
-                    tx.contributor?.id === userId,
-                )
-                .map((tx: any) => (
+              {contributorNotificationData.notifications
+                .filter((item) => item.type === "LOCK_ACK_REQUIRED")
+                .map((item) => (
                   <div
-                    key={`ack-${tx.id}`}
+                    key={`ack-${item.transaction_id}`}
                     style={{
                       border: "1px solid #e2e8f0",
                       borderRadius: 8,
@@ -433,16 +526,15 @@ export function DashboardPage() {
                     }}
                   >
                     <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>
-                      {tx.contributor_acknowledgement?.message ||
-                        "Escrow has been locked for your listing."}
+                      {item.message}
                     </p>
                     <p className="mono" style={{ marginTop: 0 }}>
-                      Transaction ID: {tx.id}
+                      Transaction ID: {item.transaction_id}
                     </p>
                     <button
                       type="button"
                       className="primary-btn"
-                      onClick={() => contributorAckMutation.mutate(tx.id)}
+                      onClick={() => contributorAckMutation.mutate(item.transaction_id)}
                       disabled={contributorAckMutation.isPending}
                     >
                       {contributorAckMutation.isPending
@@ -453,6 +545,161 @@ export function DashboardPage() {
                 ))}
             </section>
           )}
+
+        {role === "CONTRIBUTOR" && (
+          <section className="card stack" style={{ padding: "1rem" }}>
+            <h3 style={{ marginTop: 0 }}>Nearby Emergency Request Notifications</h3>
+            {contributorNotificationsLoading && (
+              <p className="muted-text" style={{ margin: 0 }}>
+                Checking nearby request notifications...
+              </p>
+            )}
+            {!contributorNotificationsLoading && contributorNotificationsError && (
+              <p className="error-banner">
+                {getApiErrorMessage(
+                  contributorNotificationsError,
+                  "Unable to load nearby notifications",
+                )}
+              </p>
+            )}
+            {!contributorNotificationsLoading &&
+              !contributorNotificationsError &&
+              (contributorNotificationData?.notifications?.filter(
+                (item) => item.type === "OPEN_REQUEST_BROADCAST",
+              ).length ? (
+                contributorNotificationData.notifications
+                  .filter((item) => item.type === "OPEN_REQUEST_BROADCAST")
+                  .map((request) => (
+                  <div
+                    key={request.transaction_id}
+                    style={{
+                      border: "1px solid #e2e8f0",
+                      borderRadius: 8,
+                      padding: "0.85rem",
+                      marginBottom: "0.75rem",
+                    }}
+                  >
+                    <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>
+                      {request.message}
+                    </p>
+                    <p className="mono" style={{ margin: "0 0 0.35rem 0" }}>
+                      Transaction ID: {request.transaction_id}
+                    </p>
+                    <p className="muted-text" style={{ margin: "0 0 0.25rem 0" }}>
+                      Beneficiary ID: {request.beneficiary_user_id || "N/A"}
+                    </p>
+                    <p className="muted-text" style={{ margin: "0 0 0.6rem 0" }}>
+                      City: {request.city || city || "N/A"}
+                    </p>
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      onClick={() => acceptRequestMutation.mutate(request.transaction_id)}
+                      disabled={acceptRequestMutation.isPending}
+                    >
+                      {acceptRequestMutation.isPending ? "Accepting..." : "Accept Request & Lend"}
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="muted-text" style={{ margin: 0 }}>
+                  No nearby open emergency requests right now.
+                </p>
+              ))}
+          </section>
+        )}
+
+        {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
+          <section className="card stack" style={{ padding: "1rem" }}>
+            <h3 style={{ marginTop: 0 }}>Complaint Box</h3>
+            <p className="muted-text" style={{ marginTop: 0 }}>
+              Report misconduct or safety issues directly to the warden queue.
+            </p>
+            <div className="stack" style={{ gap: "0.65rem" }}>
+              <label className="field">
+                <span>Accused User ID</span>
+                <input
+                  value={complaintAccusedId}
+                  onChange={(event) => setComplaintAccusedId(event.target.value)}
+                  placeholder="Enter user ID"
+                />
+              </label>
+              <label className="field">
+                <span>Category</span>
+                <select
+                  value={complaintCategory}
+                  onChange={(event) =>
+                    setComplaintCategory(
+                      event.target.value as
+                        | "OVERPRICING"
+                        | "MISCONDUCT"
+                        | "SAFETY"
+                        | "FRAUD"
+                        | "OTHER",
+                    )
+                  }
+                >
+                  <option value="OVERPRICING">Overpricing</option>
+                  <option value="MISCONDUCT">Misconduct</option>
+                  <option value="SAFETY">Safety</option>
+                  <option value="FRAUD">Fraud</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Description</span>
+                <textarea
+                  value={complaintDescription}
+                  onChange={(event) => setComplaintDescription(event.target.value)}
+                  rows={3}
+                  placeholder="Describe what happened"
+                />
+              </label>
+            </div>
+            {complaintCreateError && <p className="error-banner">{complaintCreateError}</p>}
+            <button
+              type="button"
+              className="primary-btn"
+              onClick={() => {
+                setComplaintCreateError(null);
+                createComplaintMutation.mutate({
+                  accused_user_id: complaintAccusedId.trim(),
+                  category: complaintCategory,
+                  description: complaintDescription.trim(),
+                });
+              }}
+              disabled={createComplaintMutation.isPending}
+            >
+              {createComplaintMutation.isPending ? "Submitting complaint..." : "Submit Complaint"}
+            </button>
+
+            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem" }}>
+              <h4 style={{ margin: "0 0 0.5rem 0" }}>My Complaint History</h4>
+              {myComplaintsLoading && (
+                <p className="muted-text" style={{ margin: 0 }}>
+                  Loading your complaints...
+                </p>
+              )}
+              {!myComplaintsLoading &&
+                (myComplaintData?.complaints?.length ? (
+                  myComplaintData.complaints.slice(0, 5).map((item) => (
+                    <div key={item.id} style={{ marginBottom: "0.55rem" }}>
+                      <p className="mono" style={{ margin: "0 0 0.2rem 0" }}>
+                        #{item.id.slice(-6)} • {item.category} • {item.status}
+                      </p>
+                      <p className="muted-text" style={{ margin: 0 }}>
+                        {item.description}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="muted-text" style={{ margin: 0 }}>
+                    No complaints filed yet.
+                  </p>
+                ))}
+            </div>
+          </section>
+        )}
 
         <section
           className="dashboard-stats"

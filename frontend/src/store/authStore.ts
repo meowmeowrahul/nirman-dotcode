@@ -12,6 +12,7 @@ interface AuthState {
   regionId: string | null;
   username: string | null;
   kycStatus: KycStatus | null;
+  setKycStatus: (status: KycStatus | null) => void;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       regionId: null,
       username: null,
       kycStatus: null,
+      setKycStatus: (status) => set({ kycStatus: status }),
       login: (token) => {
         const payload = jwtDecode<JwtPayload>(token);
         const transactionState = useTransactionStore.getState();

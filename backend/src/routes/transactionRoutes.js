@@ -5,6 +5,7 @@ const {
   getSummary,
   acknowledgeReturn,
   acknowledgeContributorLock,
+  listContributorNotifications,
   listRegionalActivity,
 } = require("../controllers/transactionController");
 
@@ -22,6 +23,12 @@ router.patch(
   auth,
   authorize("CONTRIBUTOR"),
   acknowledgeContributorLock
+);
+router.get(
+  "/contributor-notifications",
+  auth,
+  authorize("CONTRIBUTOR"),
+  listContributorNotifications
 );
 router.get(
   "/regional-activity",

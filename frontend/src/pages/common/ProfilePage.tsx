@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getMyProfile } from "../../api/endpoints";
 
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -8,13 +11,28 @@ export function ProfilePage() {
   const city = useAuthStore((state) => state.city);
   const username = useAuthStore((state) => state.username);
   const kycStatus = useAuthStore((state) => state.kycStatus);
+  const setKycStatus = useAuthStore((state) => state.setKycStatus);
+
+  const { data: myProfileData } = useQuery({
+    queryKey: ["myProfile", userId],
+    queryFn: getMyProfile,
+    enabled: !!userId,
+    refetchInterval: 5000,
+  });
+
+  useEffect(() => {
+    const liveStatus = myProfileData?.user?.kyc?.status;
+    if (liveStatus) {
+      setKycStatus(liveStatus);
+    }
+  }, [myProfileData, setKycStatus]);
 
   const displayName = username?.trim() || "User";
   const displayRole =
     role == "BENEFICIARY" || role == "CONTRIBUTOR" ? "CITIZEN" : role;
   const displayUserId = userId || "-";
   const displayCity = city || "-";
-  const displayKycStatus = kycStatus || "PENDING";
+  const displayKycStatus = myProfileData?.user?.kyc?.status || kycStatus || "PENDING";
   const statusIsVerified = displayKycStatus === "VERIFIED";
   const statusBg = statusIsVerified ? "#DEF7EC" : "#FEF3C7";
   const statusText = statusIsVerified ? "#03543F" : "#9B1C1C";
@@ -184,6 +202,32 @@ export function ProfilePage() {
             >
               Complete KYC Form
             </button>
+          </div>
+        )}
+
+        {displayKycStatus === "VERIFIED" && (
+          <div
+            style={{
+              padding: "14px 24px 20px",
+              borderTop: "1px solid #E5E7EB",
+            }}
+          >
+            <p style={{ margin: 0, color: "#065F46", fontWeight: 600 }}>
+              Warden has approved your KYC submission.
+            </p>
+          </div>
+        )}
+
+        {displayKycStatus === "REJECTED" && (
+          <div
+            style={{
+              padding: "14px 24px 20px",
+              borderTop: "1px solid #E5E7EB",
+            }}
+          >
+            <p style={{ margin: 0, color: "#B91C1C", fontWeight: 600 }}>
+              Warden rejected your KYC. Please resubmit updated documents.
+            </p>
           </div>
         )}
       </div>

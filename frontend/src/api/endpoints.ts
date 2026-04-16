@@ -40,6 +40,26 @@ export async function loginUser(payload: LoginBody) {
   return response.data;
 }
 
+export async function getMyProfile() {
+  const response = await api.get<{
+    user: {
+      id: string;
+      role: User["role"];
+      name: string | null;
+      email: string | null;
+      phone: string | null;
+      city: string | null;
+      region_id: string | null;
+      kyc: {
+        status: KycStatus;
+        omc_id: string | null;
+        masked_aadhar: string | null;
+      };
+    };
+  }>("/users/me");
+  return response.data;
+}
+
 export async function rippleSearch(payload: {
   lat: number;
   lng: number;
@@ -58,7 +78,11 @@ export async function lockEscrow(payload: {
   city?: string;
   region_id?: string;
 }) {
-  const response = await api.post<{ transaction: Transaction }>(
+  const response = await api.post<{
+    transaction: Transaction;
+    reused_existing?: boolean;
+    message?: string;
+  }>(
     "/escrow/lock",
     payload,
   );
@@ -134,6 +158,18 @@ export async function updateKycStatus(userId: string, status: KycStatus) {
   const response = await api.patch<{ user: User }>(`/users/kyc/${userId}`, {
     status,
   });
+  return response.data;
+}
+
+export async function submitKycForm(payload: {
+  aadhar_doc_photo: string;
+  pan_doc_photo: string;
+  verification_selfie: string;
+}) {
+  const response = await api.post<{ kyc_form: { id: string } }>(
+    "/users/kyc-form",
+    payload,
+  );
   return response.data;
 }
 
@@ -256,6 +292,48 @@ export async function acknowledgeContributorLock(transactionId: string) {
   return response.data;
 }
 
+export async function getContributorNotifications() {
+  const response = await api.get<{
+    notifications: Array<{
+      type: "LOCK_ACK_REQUIRED" | "OPEN_REQUEST_BROADCAST";
+      transaction_id: string;
+      status: string;
+      city: string | null;
+      created_at: string;
+      message: string;
+    }>;
+    pending_ack_count: number;
+    open_request_count: number;
+  }>("/transactions/contributor-notifications");
+  return response.data;
+}
+
+export interface OpenRequestItem {
+  transaction_id: string;
+  beneficiary_user_id: string | null;
+  city: string | null;
+  created_at: string;
+  beneficiary_contact: string | null;
+  message: string;
+}
+
+export async function getOpenContributorRequests() {
+  const response = await api.get<{ requests: OpenRequestItem[] }>(
+    "/escrow/open-requests",
+  );
+  return response.data;
+}
+
+export async function acceptOpenContributorRequest(transactionId: string) {
+  const response = await api.post<{ transaction: Transaction }>(
+    "/escrow/accept-request",
+    {
+      transaction_id: transactionId,
+    },
+  );
+  return response.data;
+}
+
 export interface ComplaintItem {
   id: string;
   reporter_user_id: string;
@@ -276,6 +354,25 @@ export async function getComplaints(params?: {
     {
       params,
     },
+  );
+  return response.data;
+}
+
+export async function getMyComplaints() {
+  const response = await api.get<{ complaints: ComplaintItem[] }>(
+    "/complaints/me",
+  );
+  return response.data;
+}
+
+export async function createComplaint(payload: {
+  accused_user_id: string;
+  category: ComplaintItem["category"];
+  description: string;
+}) {
+  const response = await api.post<{ complaint: ComplaintItem }>(
+    "/complaints",
+    payload,
   );
   return response.data;
 }

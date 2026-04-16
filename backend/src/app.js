@@ -33,7 +33,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: "15mb" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
@@ -46,6 +46,12 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/contributor", contributorRoutes);
 
 app.use((error, _req, res, _next) => {
+  if (error && (error.type === "entity.too.large" || error.status === 413)) {
+    return res.status(413).json({
+      error: "request payload too large (max 15mb)",
+    });
+  }
+
   if (error.name === "ValidationError") {
     return res.status(400).json({ error: error.message });
   }

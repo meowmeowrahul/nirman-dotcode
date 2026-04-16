@@ -15,6 +15,24 @@ const verifySchema = z.object({
   physical_weight: z.coerce.number(),
   tare_weight: z.coerce.number().min(14).max(17),
   safety_passed: z.enum(["true", "false"]),
+}).superRefine((values, ctx) => {
+  const actualGasKg = Number((values.physical_weight - values.tare_weight).toFixed(3));
+
+  if (actualGasKg <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["physical_weight"],
+      message: "Physical weight must be greater than tare weight.",
+    });
+  }
+
+  if (actualGasKg > 14.2) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["physical_weight"],
+      message: "Actual gas cannot exceed 14.2kg (physical - tare <= 14.2).",
+    });
+  }
 });
 
 type VerifyInputValues = z.input<typeof verifySchema>;
@@ -29,6 +47,7 @@ export function TechVerifyPage() {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors },
   } = useForm<VerifyInputValues, unknown, VerifyOutputValues>({
     resolver: zodResolver(verifySchema),
@@ -62,6 +81,12 @@ export function TechVerifyPage() {
 
   const apiPayload = getApiErrorPayload(verifyMutation.error);
   const isRegionMismatch = apiPayload?.error === "forbidden: region mismatch";
+  const physicalWeight = Number(watch("physical_weight"));
+  const tareWeight = Number(watch("tare_weight"));
+  const hasWeightInputs = Number.isFinite(physicalWeight) && Number.isFinite(tareWeight);
+  const computedGas = hasWeightInputs
+    ? Number((physicalWeight - tareWeight).toFixed(3))
+    : null;
 
   const onSubmit = (values: VerifyOutputValues) => {
     verifyMutation.mutate(values);
@@ -123,6 +148,11 @@ export function TechVerifyPage() {
                 {errors.physical_weight.message}
               </small>
             )}
+            {!errors.physical_weight && (
+              <small className="muted-text">
+                Gross cylinder weight. Must be greater than tare.
+              </small>
+            )}
           </label>
 
           <label className="field">
@@ -136,7 +166,22 @@ export function TechVerifyPage() {
             {errors.tare_weight && (
               <small className="error-text">{errors.tare_weight.message}</small>
             )}
+            {!errors.tare_weight && (
+              <small className="muted-text">Expected shell/tare range: 14.0 to 17.0 kg.</small>
+            )}
           </label>
+        </div>
+
+        <div className="subtle-card" style={{ padding: "0.75rem" }}>
+          <p className="muted-text" style={{ margin: 0 }}>
+            Formula: actual gas = physical weight - tare weight (must be &gt; 0 and &lt;= 14.2).
+          </p>
+          <p className="mono" style={{ margin: "0.45rem 0 0 0" }}>
+            {computedGas === null ? "Actual gas: enter both weights" : `Actual gas: ${computedGas} kg`}
+          </p>
+          <p className="muted-text" style={{ margin: "0.45rem 0 0 0" }}>
+            Example valid pair: tare 14.2, physical 20.5 gives actual gas 6.3 kg.
+          </p>
         </div>
 
         <label className="field">

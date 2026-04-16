@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
 
+const ACTIVE_REQUEST_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
+
 function validateObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
@@ -176,9 +178,76 @@ async function listRegionalActivity(req, res, next) {
   }
 }
 
+async function listContributorNotifications(req, res, next) {
+  try {
+    const contributorId = req.user && req.user.userId;
+    if (!validateObjectId(contributorId)) {
+      return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const city = req.user.city || req.user.region_id || null;
+
+    const pendingAckFilter = {
+      contributor_id: contributorId,
+      status: { $in: ACTIVE_REQUEST_STATUSES },
+      "contributor_acknowledgement.status": "PENDING",
+    };
+
+    const openRequestFilter = {
+      status: "PAID_IN_ESCROW",
+      contributor_id: null,
+    };
+    if (city) {
+      openRequestFilter.$or = [{ city }, { region_id: city }];
+    }
+
+    const [pendingAcks, openRequests] = await Promise.all([
+      Transaction.find(pendingAckFilter)
+        .sort({ updatedAt: -1 })
+        .limit(30)
+        .lean(),
+      Transaction.find(openRequestFilter)
+        .sort({ createdAt: -1 })
+        .limit(30)
+        .lean(),
+    ]);
+
+    const notifications = [
+      ...pendingAcks.map((tx) => ({
+        type: "LOCK_ACK_REQUIRED",
+        transaction_id: String(tx._id),
+        status: tx.status,
+        city: tx.city || tx.region_id || null,
+        created_at: tx.createdAt,
+        message:
+          (tx.contributor_acknowledgement && tx.contributor_acknowledgement.message) ||
+          "Escrow has been locked for your listing. Acknowledge to proceed.",
+      })),
+      ...openRequests.map((tx) => ({
+        type: "OPEN_REQUEST_BROADCAST",
+        transaction_id: String(tx._id),
+        status: tx.status,
+        city: tx.city || tx.region_id || null,
+        created_at: tx.createdAt,
+        message:
+          "Emergency request in your city is open. You can accept and lend now.",
+      })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return res.status(200).json({
+      notifications,
+      pending_ack_count: pendingAcks.length,
+      open_request_count: openRequests.length,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   getSummary,
   acknowledgeReturn,
   acknowledgeContributorLock,
+  listContributorNotifications,
   listRegionalActivity,
 };

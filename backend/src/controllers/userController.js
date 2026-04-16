@@ -41,6 +41,43 @@ function parseFiniteNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+async function getMyProfile(req, res, next) {
+  try {
+    const userId = req.user && req.user.userId;
+    if (!userId || !isValidObjectId(userId)) {
+      return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const user = await User.findById(userId)
+      .select("role name email phone city region_id kyc")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    return res.status(200).json({
+      user: {
+        id: String(user._id),
+        role: user.role,
+        name: user.name || null,
+        email: user.email || null,
+        phone: user.phone || null,
+        city: user.city || user.region_id || null,
+        region_id: user.region_id || user.city || null,
+        kyc: {
+          status: user.kyc && user.kyc.status ? user.kyc.status : "PENDING",
+          omc_id: user.kyc && user.kyc.omc_id ? user.kyc.omc_id : null,
+          masked_aadhar:
+            user.kyc && user.kyc.masked_aadhar ? user.kyc.masked_aadhar : null,
+        },
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function updateKycStatus(req, res, next) {
   try {
     const { id } = req.params;
@@ -359,6 +396,7 @@ async function listUserTransactions(req, res, next) {
 }
 
 module.exports = {
+  getMyProfile,
   updateKycStatus,
   listUserTransactions,
   submitKycForm,

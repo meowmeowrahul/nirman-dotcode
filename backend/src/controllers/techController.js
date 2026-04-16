@@ -81,7 +81,10 @@ async function verifyTransaction(req, res, next) {
 
     const actualGasKg = Number((physicalWeight - tareWeight).toFixed(3));
     if (actualGasKg <= 0) {
-      return res.status(400).json({ error: "invalid weights: actual gas must be greater than zero" });
+      return res.status(400).json({
+        error:
+          "invalid weights: actual_gas_kg = physical_weight - tare_weight, must be greater than 0 and not exceed 14.2kg",
+      });
     }
 
     tx.technician_id = req.user.userId;
