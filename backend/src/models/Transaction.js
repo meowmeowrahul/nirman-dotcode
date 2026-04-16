@@ -33,7 +33,7 @@ const transactionSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT", "COMPLETED", "CANCELLED"],
+      enum: ["PAID_IN_ESCROW", "PENDING_WARDEN_REVIEW", "VERIFIED", "IN_TRANSIT", "COMPLETED", "CANCELLED"],
       required: true,
       default: "PAID_IN_ESCROW",
       index: true,
