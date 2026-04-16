@@ -116,3 +116,14 @@ export interface ApiErrorPayload {
   flagged?: boolean;
   capped_final_gas_payout?: number;
 }
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+  meta: Record<string, unknown>;
+}

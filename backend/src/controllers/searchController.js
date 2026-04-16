@@ -1,6 +1,7 @@
 const { rippleSearch } = require("../services/rippleSearchService");
 const Transaction = require("../models/Transaction");
 const User = require("../models/User");
+const { notifyCitizensLpgNeeded } = require("../services/notificationService");
 
 const ACTIVE_REQUEST_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
 const LENDING_ROLES = ["CONTRIBUTOR", "BENEFICIARY"];
@@ -60,6 +61,14 @@ async function ripple(req, res, next) {
       city: city || null,
       requesterUserId,
     });
+
+    try {
+      await notifyCitizensLpgNeeded({
+        city: city || null,
+      });
+    } catch (_notificationError) {
+    }
+
     return res.status(200).json(contributors);
   } catch (error) {
     return next(error);

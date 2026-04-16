@@ -1,8 +1,12 @@
+import { useI18n } from "../i18n/language";
+
 interface ActiveListingProps {
   isLoading: boolean;
 }
 
 export function ActiveListing({ isLoading }: ActiveListingProps) {
+  const { t } = useI18n();
+
   return (
     <div
       style={{
@@ -28,8 +32,12 @@ export function ActiveListing({ isLoading }: ActiveListingProps) {
       />
       <p style={{ margin: 0, color: "#0F172A", fontWeight: 600 }}>
         {isLoading
-          ? "Listing Active: Waiting for an emergency request near your location..."
-          : "Listing Active: Waiting for an emergency request near your location..."}
+          ? t(
+              "Listing Active: Waiting for an emergency request near your location...",
+            )
+          : t(
+              "Listing Active: Waiting for an emergency request near your location...",
+            )}
       </p>
     </div>
   );

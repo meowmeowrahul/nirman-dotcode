@@ -8,16 +8,21 @@ import { loginUser } from "../../api/endpoints";
 import { getApiErrorMessage } from "../../api/error";
 import { useAuthStore } from "../../store/authStore";
 import { User, Lock, Eye, EyeOff, ShieldCheck, Shield } from "lucide-react";
+import { translateStatic, useI18n } from "../../i18n/language";
 import "./auth.css";
 
 const loginSchema = z.object({
-  identity: z.string().trim().min(3, "Enter valid mobile or email"),
-  password: z.string().min(1, "Password is required"),
+  identity: z
+    .string()
+    .trim()
+    .min(3, translateStatic("Enter valid mobile or email")),
+  password: z.string().min(1, translateStatic("Password is required")),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
   const [activeTab, setActiveTab] = useState<"Citizen" | "Warden" | "Tech">(
@@ -46,7 +51,7 @@ export function LoginPage() {
     },
     onError: (error) => {
       setError("root", {
-        message: getApiErrorMessage(error, "Unable to login"),
+        message: getApiErrorMessage(error, t("Unable to login")),
       });
     },
   });
@@ -92,7 +97,7 @@ export function LoginPage() {
           </svg>
         </div>
         <h1 className="auth-title">SahayLPG</h1>
-        <p className="auth-subtitle">Government Oversight Active</p>
+        <p className="auth-subtitle">{t("Government Oversight Active")}</p>
       </div>
 
       <main className="auth-card-modern">
@@ -102,21 +107,21 @@ export function LoginPage() {
             className={`auth-tab ${activeTab === "Citizen" ? "active" : ""}`}
             onClick={() => setActiveTab("Citizen")}
           >
-            Citizen
+            {t("Citizen")}
           </button>
           <button
             type="button"
             className={`auth-tab ${activeTab === "Warden" ? "active" : ""}`}
             onClick={() => setActiveTab("Warden")}
           >
-            Warden
+            {t("Warden")}
           </button>
           <button
             type="button"
             className={`auth-tab ${activeTab === "Tech" ? "active" : ""}`}
             onClick={() => setActiveTab("Tech")}
           >
-            Tech
+            {t("Tech")}
           </button>
         </div>
 
@@ -127,7 +132,7 @@ export function LoginPage() {
 
           <div className="auth-form-group">
             <div className="auth-label-row">
-              <label className="auth-label">IDENTITY</label>
+              <label className="auth-label">{t("IDENTITY")}</label>
             </div>
             <div className="auth-input-wrap">
               <User size={18} className="auth-input-icon" />
@@ -135,7 +140,7 @@ export function LoginPage() {
                 type="text"
                 {...register("identity")}
                 className="auth-input"
-                placeholder="Mobile number or email"
+                placeholder={t("Mobile number or email")}
               />
             </div>
             {errors.identity && (
@@ -145,9 +150,9 @@ export function LoginPage() {
 
           <div className="auth-form-group">
             <div className="auth-label-row">
-              <label className="auth-label">SECURITY KEY</label>
+              <label className="auth-label">{t("SECURITY KEY")}</label>
               <Link to="#" className="auth-forgot">
-                Forgot?
+                {t("Forgot?")}
               </Link>
             </div>
             <div className="auth-input-wrap">
@@ -156,7 +161,7 @@ export function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
                 className="auth-input"
-                placeholder="Enter password"
+                placeholder={t("Enter password")}
               />
               <button
                 type="button"
@@ -177,16 +182,16 @@ export function LoginPage() {
             className="auth-submit-btn"
             disabled={loginMutation.isPending}
           >
-            {loginMutation.isPending ? "Signing in..." : "Secure Sign In"}
+            {loginMutation.isPending ? t("Signing in...") : t("Secure Sign In")}
           </button>
         </form>
 
         <div className="auth-divider"></div>
 
         <p className="auth-signup-text">
-          New to SahayLPG?{" "}
+          {t("New to SahayLPG?")}{" "}
           <Link to="/register" className="auth-signup-link">
-            Create {activeTab} Account
+            {t("Create")} {t(activeTab)} {t("Account")}
           </Link>
         </p>
       </main>
@@ -197,8 +202,8 @@ export function LoginPage() {
             <ShieldCheck size={20} />
           </div>
           <div className="auth-badge-content">
-            <span className="auth-badge-title">VERIFIED</span>
-            <span className="auth-badge-text">Govt Secure</span>
+            <span className="auth-badge-title">{t("VERIFIED")}</span>
+            <span className="auth-badge-text">{t("Govt Secure")}</span>
           </div>
         </div>
         <div className="auth-badge auth-badge-gray">
@@ -206,8 +211,8 @@ export function LoginPage() {
             <Shield size={20} />
           </div>
           <div className="auth-badge-content">
-            <span className="auth-badge-title">PRIVACY</span>
-            <span className="auth-badge-text">End-to-End</span>
+            <span className="auth-badge-title">{t("PRIVACY")}</span>
+            <span className="auth-badge-text">{t("End-to-End")}</span>
           </div>
         </div>
       </div>
@@ -216,13 +221,13 @@ export function LoginPage() {
         <p className="auth-footer-title">SahayLPG Ecosystem © 2024</p>
         <div className="auth-footer-links">
           <Link to="#" className="auth-footer-link">
-            Privacy Policy
+            {t("Privacy Policy")}
           </Link>
           <Link to="#" className="auth-footer-link">
-            Emergency Terms
+            {t("Emergency Terms")}
           </Link>
           <Link to="#" className="auth-footer-link">
-            Support
+            {t("Support")}
           </Link>
         </div>
       </footer>

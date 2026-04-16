@@ -5,8 +5,10 @@ import { getApiErrorMessage, getApiErrorPayload } from "../../api/error";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusChip } from "../../components/StatusChip";
 import { useTransactionStore } from "../../store/transactionStore";
+import { useI18n } from "../../i18n/language";
 
 export function TechHandoverPage() {
+  const { t, tStatus } = useI18n();
   const latestTransaction = useTransactionStore(
     (state) => state.latestTransaction,
   );
@@ -26,7 +28,7 @@ export function TechHandoverPage() {
       setErrorMessage(null);
     },
     onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, "Handover failed"));
+      setErrorMessage(getApiErrorMessage(error, t("Handover failed")));
     },
   });
 
@@ -35,7 +37,7 @@ export function TechHandoverPage() {
 
   const submit = () => {
     if (!transactionId.trim()) {
-      setErrorMessage("Transaction ID is required");
+      setErrorMessage(t("Transaction ID is required"));
       return;
     }
     handoverMutation.mutate(transactionId.trim());
@@ -44,12 +46,12 @@ export function TechHandoverPage() {
   return (
     <section className="card stack">
       <PageHeader
-        title="Technician Handover"
-        subtitle="Move only VERIFIED transactions to IN_TRANSIT."
+        title={t("Technician Handover")}
+        subtitle={t("Move only VERIFIED transactions to IN_TRANSIT.")}
       />
 
       <label className="field">
-        <span>Transaction ID</span>
+        <span>{t("Transaction ID")}</span>
         <input
           value={transactionId}
           onChange={(event) => setTransactionId(event.target.value)}
@@ -64,15 +66,15 @@ export function TechHandoverPage() {
         onClick={submit}
       >
         {handoverMutation.isPending
-          ? "Processing handover..."
-          : "Complete handover"}
+          ? t("Processing handover...")
+          : t("Complete handover")}
       </button>
 
       {isRegionMismatch && (
         <div className="error-panel">
-          <h3>Region mismatch lockout</h3>
+          <h3>{t("Region mismatch lockout")}</h3>
           <p className="muted-text">
-            Technician region does not match transaction region.
+            {t("Technician region does not match transaction region.")}
           </p>
         </div>
       )}
@@ -82,11 +84,11 @@ export function TechHandoverPage() {
       {handoverMutation.data?.transaction && (
         <div className="success-panel">
           <StatusChip
-            label={handoverMutation.data.transaction.status}
+            label={tStatus(handoverMutation.data.transaction.status)}
             tone="info"
           />
           <p className="mono">
-            Transaction: {handoverMutation.data.transaction._id}
+            {t("Transaction")}: {handoverMutation.data.transaction._id}
           </p>
         </div>
       )}

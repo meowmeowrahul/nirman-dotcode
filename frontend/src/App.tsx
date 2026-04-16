@@ -8,6 +8,7 @@ import { EmergencyRequestPage } from "./pages/beneficiary/EmergencyRequestPage";
 import { DashboardPage } from "./pages/common/DashboardPage";
 import { NotFoundPage } from "./pages/common/NotFoundPage";
 import { ProfilePage } from "./pages/common/ProfilePage";
+import { NotificationsPage } from "./pages/common/NotificationsPage";
 import { KycCompletionPage } from "./pages/common/KycCompletionPage";
 import { EscrowClosurePage } from "./pages/escrow/EscrowClosurePage";
 import { TechHandoverPage } from "./pages/technician/TechHandoverPage";
@@ -30,6 +31,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/home" element={<RoleHomeRedirect />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/kyc-completion" element={<KycCompletionPage />} />

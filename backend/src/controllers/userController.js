@@ -2,6 +2,7 @@ const User = require("../models/User");
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
 const KycForm = require("../models/KycForm");
+const { createNotification } = require("../services/notificationService");
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
@@ -30,9 +31,10 @@ function normalizeKycImage(value) {
 
   return {
     url,
-    mime_type: typeof value.mime_type === "string" && value.mime_type.trim()
-      ? value.mime_type.trim()
-      : null,
+    mime_type:
+      typeof value.mime_type === "string" && value.mime_type.trim()
+        ? value.mime_type.trim()
+        : null,
   };
 }
 
@@ -91,11 +93,24 @@ async function updateKycStatus(req, res, next) {
     const user = await User.findByIdAndUpdate(
       id,
       { $set: { "kyc.status": status } },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!user) {
       return res.status(404).json({ error: "user not found" });
+    }
+
+    if (status === "VERIFIED" || status === "REJECTED") {
+      const decisionText = status === "VERIFIED" ? "approved" : "rejected";
+      await createNotification({
+        recipientUserId: String(user._id),
+        type: "KYC_DECISION",
+        title: "KYC Verification Update",
+        message: `Your KYC verification has been ${decisionText} by warden.`,
+        meta: {
+          kyc_status: status,
+        },
+      });
     }
 
     return res.status(200).json({ user: user.toJSON() });
@@ -119,7 +134,9 @@ async function updateMyLocation(req, res, next) {
     }
 
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return res.status(400).json({ error: "invalid latitude or longitude range" });
+      return res
+        .status(400)
+        .json({ error: "invalid latitude or longitude range" });
     }
 
     const user = await User.findByIdAndUpdate(
@@ -132,7 +149,7 @@ async function updateMyLocation(req, res, next) {
           },
         },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!user) {
@@ -164,7 +181,8 @@ async function submitKycForm(req, res, next) {
 
     if (!aadharDocPhoto || !panDocPhoto || !verificationSelfie) {
       return res.status(400).json({
-        error: "aadhar_doc_photo, pan_doc_photo and verification_selfie are required",
+        error:
+          "aadhar_doc_photo, pan_doc_photo and verification_selfie are required",
       });
     }
 
@@ -183,7 +201,7 @@ async function submitKycForm(req, res, next) {
         new: true,
         runValidators: true,
         setDefaultsOnInsert: true,
-      }
+      },
     );
 
     await User.findByIdAndUpdate(userId, { $set: { "kyc.status": "PENDING" } });
@@ -261,7 +279,10 @@ async function getKycFormForWarden(req, res, next) {
               phone: form.user_id.phone || null,
               city: form.user_id.city || form.user_id.region_id || null,
               region_id: form.user_id.region_id || null,
-              kyc_status: form.user_id.kyc && form.user_id.kyc.status ? form.user_id.kyc.status : null,
+              kyc_status:
+                form.user_id.kyc && form.user_id.kyc.status
+                  ? form.user_id.kyc.status
+                  : null,
             }
           : null,
         aadhar_doc_photo: form.aadhar_doc_photo,
@@ -279,7 +300,12 @@ async function getKycFormForWarden(req, res, next) {
 
 async function listPendingKycForms(req, res, next) {
   try {
-    const city = req.query.city || req.query.region_id || req.user.city || req.user.region_id || null;
+    const city =
+      req.query.city ||
+      req.query.region_id ||
+      req.user.city ||
+      req.user.region_id ||
+      null;
 
     const forms = await KycForm.find()
       .sort({ submitted_at: -1 })
@@ -326,7 +352,8 @@ async function listUserTransactions(req, res, next) {
       return res.status(400).json({ error: "valid userId is required" });
     }
 
-    const requesterId = req.user && req.user.userId ? String(req.user.userId) : null;
+    const requesterId =
+      req.user && req.user.userId ? String(req.user.userId) : null;
     const isSelfRequest = requesterId === String(userId);
     const isWarden = req.user && req.user.role === "WARDEN";
 

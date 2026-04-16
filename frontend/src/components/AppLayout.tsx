@@ -2,9 +2,14 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import { useAuthStore } from "../store/authStore";
 import { useTransactionStore } from "../store/transactionStore";
+import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { Role } from "../types/domain";
 import { useState, useRef, useEffect } from "react";
 import { MapPin, Bell, User, LogOut, Globe } from "lucide-react";
+import { getMyNotifications } from "../api/endpoints";
+import { useI18n } from "../i18n/language";
+import type { AppLanguage } from "../i18n/language";
 
 interface NavItem {
   to: string;
@@ -23,6 +28,7 @@ const navByRole: Record<Role, NavItem[]> = {
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const { language, setLanguage, t, tStatus } = useI18n();
   const role = useAuthStore((state) => state.role);
   const city = useAuthStore((state) => state.city);
   const logout = useAuthStore((state) => state.logout);
@@ -31,8 +37,44 @@ export function AppLayout() {
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const langDropdownRef = useRef<HTMLDivElement>(null);
+  const seenNotificationIdsRef = useRef<Set<string>>(new Set());
+
+  const { data: notificationData } = useQuery({
+    queryKey: ["myNotifications"],
+    queryFn: () => getMyNotifications(100),
+    enabled: Boolean(role),
+    refetchInterval: 5000,
+  });
+
+  const unreadCount = notificationData?.unread_count || 0;
+
+  const languageOptions: Array<{ code: AppLanguage; label: string }> = [
+    { code: "en", label: t("English") },
+    { code: "hi", label: t("Hindi") },
+    { code: "mr", label: t("Marathi") },
+  ];
 
   const links = role ? navByRole[role] : [];
+
+  useEffect(() => {
+    if (!role) {
+      seenNotificationIdsRef.current.clear();
+      return;
+    }
+
+    const rows = notificationData?.notifications || [];
+    rows
+      .filter((item) => !item.is_read)
+      .slice(0, 3)
+      .forEach((item) => {
+        if (!seenNotificationIdsRef.current.has(item.id)) {
+          toast(item.title, {
+            description: item.message,
+          });
+          seenNotificationIdsRef.current.add(item.id);
+        }
+      });
+  }, [role, notificationData]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -81,13 +123,13 @@ export function AppLayout() {
             }}
           >
             <MapPin size={16} color="#F97316" />
-            <span style={{ fontWeight: 500 }}>{city || "City not set"}</span>
+            <span style={{ fontWeight: 500 }}>{city || t("City not set")}</span>
           </div>
         </div>
 
         <nav
           className="topnav"
-          aria-label="Role navigation"
+          aria-label={t("Role navigation")}
           style={{ flex: 1, justifyContent: "center" }}
         >
           {links.map((item) => (
@@ -98,7 +140,7 @@ export function AppLayout() {
                 clsx("nav-link", isActive && "nav-link-active")
               }
             >
-              {item.label}
+              {t(item.label)}
             </NavLink>
           ))}
         </nav>
@@ -123,7 +165,7 @@ export function AppLayout() {
               letterSpacing: "0.02em",
             }}
           >
-            Status: {userStatus}
+            {t("Status")}: {tStatus(userStatus)}
           </div>
 
           <div ref={langDropdownRef} style={{ position: "relative" }}>
@@ -157,11 +199,12 @@ export function AppLayout() {
                   padding: "4px",
                 }}
               >
-                {["English", "Hindi", "Marathi"].map((lang) => (
+                {languageOptions.map((lang) => (
                   <button
-                    key={lang}
+                    key={lang.code}
                     onClick={() => {
-                      setLangDropdownOpen(false); /* handle language change */
+                      setLanguage(lang.code);
+                      setLangDropdownOpen(false);
                     }}
                     style={{
                       display: "block",
@@ -174,6 +217,7 @@ export function AppLayout() {
                       fontSize: "0.875rem",
                       color: "#374151",
                       borderRadius: "4px",
+                      fontWeight: language === lang.code ? 700 : 400,
                     }}
                     onMouseOver={(e) =>
                       (e.currentTarget.style.backgroundColor = "#F3F4F6")
@@ -182,7 +226,7 @@ export function AppLayout() {
                       (e.currentTarget.style.backgroundColor = "transparent")
                     }
                   >
-                    {lang}
+                    {lang.label}
                   </button>
                 ))}
               </div>
@@ -190,14 +234,30 @@ export function AppLayout() {
           </div>
 
           <button
+            onClick={() => navigate("/notifications")}
             style={{
               background: "none",
               border: "none",
               cursor: "pointer",
               color: "#6B7280",
+              position: "relative",
             }}
+            aria-label={t("Open notifications")}
           >
             <Bell size={24} />
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  width: 10,
+                  height: 10,
+                  backgroundColor: "#DC2626",
+                  borderRadius: "9999px",
+                }}
+              />
+            )}
           </button>
 
           <div ref={dropdownRef} style={{ position: "relative" }}>
@@ -266,7 +326,7 @@ export function AppLayout() {
                     (e.currentTarget.style.backgroundColor = "transparent")
                   }
                 >
-                  <User size={16} /> Profile
+                  <User size={16} /> {t("Profile")}
                 </button>
                 <button
                   onClick={() => {
@@ -295,7 +355,7 @@ export function AppLayout() {
                     (e.currentTarget.style.backgroundColor = "transparent")
                   }
                 >
-                  <LogOut size={16} /> Logout
+                  <LogOut size={16} /> {t("Logout")}
                 </button>
               </div>
             )}

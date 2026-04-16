@@ -1,12 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { lockEscrow, rippleSearch, updateMyLocation } from "../../api/endpoints";
+import {
+  lockEscrow,
+  rippleSearch,
+  updateMyLocation,
+} from "../../api/endpoints";
 import { getApiErrorMessage } from "../../api/error";
 import type { Contributor, Transaction } from "../../types/domain";
 import { useAuthStore } from "../../store/authStore";
 import { useTransactionStore } from "../../store/transactionStore";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusChip } from "../../components/StatusChip";
+import { useI18n } from "../../i18n/language";
 
 interface Coordinates {
   lat: number;
@@ -14,10 +19,13 @@ interface Coordinates {
 }
 
 export function EmergencyRequestPage() {
+  const { t, tStatus } = useI18n();
   const userId = useAuthStore((state) => state.userId);
   const city = useAuthStore((state) => state.city);
   const setUserStatus = useTransactionStore((state) => state.setUserStatus);
-  const setActiveTransaction = useTransactionStore((state) => state.setActiveTransaction);
+  const setActiveTransaction = useTransactionStore(
+    (state) => state.setActiveTransaction,
+  );
 
   const [coords, setCoords] = useState<Coordinates | null>(null);
   const [permissionState, setPermissionState] = useState<
@@ -41,7 +49,9 @@ export function EmergencyRequestPage() {
       setSelectedContributorId(data[0]?._id ?? null);
     },
     onError: (error) => {
-      setSearchError(getApiErrorMessage(error, "Unable to run ripple search"));
+      setSearchError(
+        getApiErrorMessage(error, t("Unable to run ripple search")),
+      );
       setContributors([]);
       setSelectedContributorId(null);
     },
@@ -62,7 +72,7 @@ export function EmergencyRequestPage() {
       });
     },
     onError: (error) => {
-      setLockError(getApiErrorMessage(error, "Unable to lock escrow"));
+      setLockError(getApiErrorMessage(error, t("Unable to lock escrow")));
       setLockedTransaction(null);
     },
   });
@@ -70,7 +80,7 @@ export function EmergencyRequestPage() {
   const requestLocation = () => {
     if (!navigator.geolocation) {
       setPermissionState("denied");
-      setSearchError("Geolocation is not supported in this browser");
+      setSearchError(t("Geolocation is not supported in this browser"));
       return;
     }
 
@@ -88,7 +98,7 @@ export function EmergencyRequestPage() {
       () => {
         setPermissionState("denied");
         setSearchError(
-          "Location permission denied. Enable location and retry.",
+          t("Location permission denied. Enable location and retry."),
         );
       },
     );
@@ -96,7 +106,7 @@ export function EmergencyRequestPage() {
 
   const runSearch = () => {
     if (!coords) {
-      setSearchError("Location is required before ripple search");
+      setSearchError(t("Location is required before ripple search"));
       return;
     }
 
@@ -112,7 +122,7 @@ export function EmergencyRequestPage() {
 
   const confirmAndLock = () => {
     if (!userId) {
-      setLockError("Missing beneficiary session. Login again.");
+      setLockError(t("Missing beneficiary session. Login again."));
       return;
     }
 
@@ -126,14 +136,18 @@ export function EmergencyRequestPage() {
   return (
     <section className="card stack">
       <PageHeader
-        title="Emergency LPG Request"
-        subtitle="Allow location, find verified nearby contributors, then lock escrow."
+        title={t("Emergency LPG Request")}
+        subtitle={t(
+          "Allow location, find verified nearby contributors, then lock escrow.",
+        )}
       />
 
       <div className="card subtle-card stack">
-        <h2>Step 1: Location permission</h2>
+        <h2>{t("Step 1: Location permission")}</h2>
         <p className="muted-text">
-          Geolocation is mandatory. Manual latitude/longitude entry is disabled.
+          {t(
+            "Geolocation is mandatory. Manual latitude/longitude entry is disabled.",
+          )}
         </p>
         <div className="row gap-12">
           <button
@@ -142,8 +156,8 @@ export function EmergencyRequestPage() {
             onClick={requestLocation}
           >
             {permissionState === "granted"
-              ? "Refresh location"
-              : "Grant location permission"}
+              ? t("Refresh location")
+              : t("Grant location permission")}
           </button>
           {permissionState === "granted" && coords && (
             <StatusChip
@@ -152,15 +166,15 @@ export function EmergencyRequestPage() {
             />
           )}
           {permissionState === "denied" && (
-            <StatusChip label="Permission denied" tone="error" />
+            <StatusChip label={t("Permission denied")} tone="error" />
           )}
         </div>
       </div>
 
       <div className="card stack">
-        <h2>Step 2: Ripple contributor search</h2>
+        <h2>{t("Step 2: Ripple contributor search")}</h2>
         <label className="field">
-          <span>Urgency score (0-10)</span>
+          <span>{t("Urgency score (0-10)")}</span>
           <input
             type="number"
             min={0}
@@ -176,17 +190,19 @@ export function EmergencyRequestPage() {
           disabled={permissionState !== "granted" || searchMutation.isPending}
         >
           {searchMutation.isPending
-            ? "Searching contributors..."
-            : "Run ripple search"}
+            ? t("Searching contributors...")
+            : t("Run ripple search")}
         </button>
 
         {searchError && <p className="error-banner">{searchError}</p>}
 
         {contributors.length === 0 && !searchMutation.isPending && (
           <div className="empty-state">
-            <p>No listed contributors found nearby.</p>
+            <p>{t("No listed contributors found nearby.")}</p>
             <p className="muted-text">
-              Retry search after location refresh or increase urgency score.
+              {t(
+                "Retry search after location refresh or increase urgency score.",
+              )}
             </p>
           </div>
         )}
@@ -208,8 +224,10 @@ export function EmergencyRequestPage() {
                   onClick={() => setSelectedContributorId(person._id)}
                 >
                   <p className="mono">{person._id}</p>
-                  <p>{person.phone || person.email || "Contributor"}</p>
-                  <p className="metric-text">Distance: {distance} km</p>
+                  <p>{person.phone || person.email || t("Contributor")}</p>
+                  <p className="metric-text">
+                    {t("Distance")}: {distance} km
+                  </p>
                 </button>
               );
             })}
@@ -218,13 +236,16 @@ export function EmergencyRequestPage() {
       </div>
 
       <div className="card stack">
-        <h2>Step 3: Confirm request and lock escrow</h2>
+        <h2>{t("Step 3: Confirm request and lock escrow")}</h2>
         <p className="muted-text">
-          If no contributor is selected, request is still broadcast as a city
-          notification and contributors can accept later.
+          {t(
+            "If no contributor is selected, request is still broadcast as a city notification and contributors can accept later.",
+          )}
         </p>
         {selectedContributorId && (
-          <p className="mono">Selected contributor: {selectedContributorId}</p>
+          <p className="mono">
+            {t("Selected contributor")}: {selectedContributorId}
+          </p>
         )}
 
         <button
@@ -234,17 +255,22 @@ export function EmergencyRequestPage() {
           disabled={lockMutation.isPending}
         >
           {lockMutation.isPending
-            ? "Locking escrow..."
-            : "Confirm emergency request"}
+            ? t("Locking escrow...")
+            : t("Confirm emergency request")}
         </button>
 
         {lockError && <p className="error-banner">{lockError}</p>}
 
         {lockedTransaction && (
           <div className="success-panel">
-            <h3>Escrow locked</h3>
-            <p className="mono">Transaction ID: {lockedTransaction._id}</p>
-            <StatusChip label={lockedTransaction.status} tone="success" />
+            <h3>{t("Escrow locked")}</h3>
+            <p className="mono">
+              {t("Transaction ID")}: {lockedTransaction._id}
+            </p>
+            <StatusChip
+              label={tStatus(lockedTransaction.status)}
+              tone="success"
+            />
           </div>
         )}
       </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { submitKycForm } from "../../api/endpoints";
 import { getApiErrorMessage } from "../../api/error";
+import { useI18n } from "../../i18n/language";
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -20,6 +21,7 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 export function KycCompletionPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [aadharFile, setAadharFile] = useState<File | null>(null);
@@ -37,7 +39,7 @@ export function KycCompletionPage() {
     },
     onError: (error) => {
       setLoading(false);
-      setFormError(getApiErrorMessage(error, "Unable to submit KYC"));
+      setFormError(getApiErrorMessage(error, t("Unable to submit KYC")));
     },
   });
 
@@ -70,7 +72,9 @@ export function KycCompletionPage() {
       setIsCameraActive(true);
     } catch {
       setCameraError(
-        "Unable to access camera. Please allow camera permission and try again.",
+        t(
+          "Unable to access camera. Please allow camera permission and try again.",
+        ),
       );
       setIsCameraActive(false);
     }
@@ -88,7 +92,7 @@ export function KycCompletionPage() {
 
     const context = canvas.getContext("2d");
     if (!context) {
-      setCameraError("Failed to capture selfie. Please try again.");
+      setCameraError(t("Failed to capture selfie. Please try again."));
       return;
     }
 
@@ -110,7 +114,7 @@ export function KycCompletionPage() {
 
     if (!aadharFile || !panFile || !selfieImage) {
       setFormError(
-        "Aadhar upload, PAN upload, and live selfie capture are required.",
+        t("Aadhar upload, PAN upload, and live selfie capture are required."),
       );
       return;
     }
@@ -131,7 +135,7 @@ export function KycCompletionPage() {
     } catch (error) {
       setLoading(false);
       setFormError(
-        getApiErrorMessage(error, "Unable to process KYC documents"),
+        getApiErrorMessage(error, t("Unable to process KYC documents")),
       );
     }
   };
@@ -146,10 +150,12 @@ export function KycCompletionPage() {
     >
       <div style={{ marginBottom: "18px" }}>
         <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#111827" }}>
-          Complete Your KYC
+          {t("Complete Your KYC")}
         </h1>
         <p style={{ fontSize: "14px", color: "#6B7280", marginTop: "6px" }}>
-          Upload documents and capture a live selfie to submit verification.
+          {t(
+            "Upload documents and capture a live selfie to submit verification.",
+          )}
         </p>
       </div>
 
@@ -171,7 +177,7 @@ export function KycCompletionPage() {
           }}
         >
           <p style={{ color: "#4B5563", margin: 0, fontSize: "14px" }}>
-            Required: Aadhar, PAN, and a live camera selfie.
+            {t("Required: Aadhar, PAN, and a live camera selfie.")}
           </p>
         </div>
 
@@ -216,7 +222,7 @@ export function KycCompletionPage() {
                   marginBottom: "8px",
                 }}
               >
-                Aadhar Upload
+                {t("Aadhar Upload")}
               </label>
               <input
                 required
@@ -246,7 +252,7 @@ export function KycCompletionPage() {
                   marginBottom: "8px",
                 }}
               >
-                PAN Upload
+                {t("PAN Upload")}
               </label>
               <input
                 required
@@ -277,7 +283,7 @@ export function KycCompletionPage() {
                 marginBottom: "10px",
               }}
             >
-              Selfie (Live Camera Only)
+              {t("Selfie (Live Camera Only)")}
             </label>
 
             {!selfieImage && (
@@ -302,7 +308,7 @@ export function KycCompletionPage() {
             {selfieImage && (
               <img
                 src={selfieImage}
-                alt="Captured selfie"
+                alt={t("Captured selfie")}
                 style={{
                   width: "100%",
                   border: "1px solid #D1D5DB",
@@ -345,7 +351,7 @@ export function KycCompletionPage() {
                   boxShadow: "0 8px 16px rgba(37,99,235,0.25)",
                 }}
               >
-                {isCameraActive ? "Restart Camera" : "Start Camera"}
+                {isCameraActive ? t("Restart Camera") : t("Start Camera")}
               </button>
 
               <button
@@ -363,7 +369,7 @@ export function KycCompletionPage() {
                   opacity: isCameraActive ? 1 : 0.6,
                 }}
               >
-                Capture Selfie
+                {t("Capture Selfie")}
               </button>
             </div>
           </div>
@@ -392,7 +398,7 @@ export function KycCompletionPage() {
               color: "#374151",
             }}
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             type="submit"
@@ -409,7 +415,7 @@ export function KycCompletionPage() {
               boxShadow: "0 8px 18px rgba(37,99,235,0.25)",
             }}
           >
-            {loading ? "Submitting..." : "Submit KYC"}
+            {loading ? t("Submitting...") : t("Submit KYC")}
           </button>
         </div>
       </form>

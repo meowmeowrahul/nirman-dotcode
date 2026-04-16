@@ -6,10 +6,12 @@ import { getApiErrorMessage } from "../../api/error";
 import { PageHeader } from "../../components/PageHeader";
 import { StatusChip } from "../../components/StatusChip";
 import type { KycStatus, User } from "../../types/domain";
+import { useI18n } from "../../i18n/language";
 
 const statuses: KycStatus[] = ["PENDING", "VERIFIED", "REJECTED"];
 
 export function WardenKycPage() {
+  const { t, tStatus } = useI18n();
   const [userId, setUserId] = useState("");
   const [status, setStatus] = useState<KycStatus>("PENDING");
   const [auditTime, setAuditTime] = useState<string | null>(null);
@@ -25,19 +27,21 @@ export function WardenKycPage() {
       setErrorMessage(null);
     },
     onError: (error) => {
-      setErrorMessage(getApiErrorMessage(error, "Unable to update KYC status"));
+      setErrorMessage(
+        getApiErrorMessage(error, t("Unable to update KYC status")),
+      );
       setUpdatedUser(null);
     },
   });
 
   const submit = () => {
     if (!statuses.includes(status)) {
-      setErrorMessage("Invalid KYC status selection");
+      setErrorMessage(t("Invalid KYC status selection"));
       return;
     }
 
     if (!userId.trim()) {
-      setErrorMessage("User ID is required");
+      setErrorMessage(t("User ID is required"));
       return;
     }
 
@@ -47,28 +51,30 @@ export function WardenKycPage() {
   return (
     <section className="card stack">
       <PageHeader
-        title="Warden KYC Governance"
-        subtitle="Review user KYC and update status to PENDING, VERIFIED, or REJECTED."
+        title={t("Warden KYC Governance")}
+        subtitle={t(
+          "Review user KYC and update status to PENDING, VERIFIED, or REJECTED.",
+        )}
       />
 
       <label className="field">
-        <span>User ID</span>
+        <span>{t("User ID")}</span>
         <input
           value={userId}
           onChange={(event) => setUserId(event.target.value)}
-          placeholder="Mongo user id"
+          placeholder={t("Mongo user id")}
         />
       </label>
 
       <label className="field">
-        <span>KYC status</span>
+        <span>{t("KYC status")}</span>
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value as KycStatus)}
         >
           {statuses.map((item) => (
             <option value={item} key={item}>
-              {item}
+              {tStatus(item)}
             </option>
           ))}
         </select>
@@ -80,29 +86,30 @@ export function WardenKycPage() {
         onClick={submit}
         disabled={mutation.isPending}
       >
-        {mutation.isPending ? "Updating status..." : "Update KYC status"}
+        {mutation.isPending ? t("Updating status...") : t("Update KYC status")}
       </button>
 
       {errorMessage && <p className="error-banner">{errorMessage}</p>}
       {(errorMessage?.includes("forbidden") ||
         errorMessage?.includes("missing role in token")) && (
         <p className="muted-text">
-          Permission issue detected. Return to dashboard and re-login with
-          WARDEN role.
+          {t(
+            "Permission issue detected. Return to dashboard and re-login with WARDEN role.",
+          )}
         </p>
       )}
       {errorMessage?.includes("user not found") && (
         <p className="muted-text">
-          No user found for this ID. Verify and retry safely.
+          {t("No user found for this ID. Verify and retry safely.")}
         </p>
       )}
 
       {updatedUser && (
         <div className="success-panel stack">
-          <h3>KYC status updated</h3>
+          <h3>{t("KYC status updated")}</h3>
           <div className="row gap-12">
             <StatusChip
-              label={updatedUser.kyc?.status ?? status}
+              label={tStatus(updatedUser.kyc?.status ?? status)}
               tone={
                 (updatedUser.kyc?.status ?? status) === "VERIFIED"
                   ? "success"
@@ -112,10 +119,14 @@ export function WardenKycPage() {
               }
             />
             {auditTime && (
-              <span className="muted-text">Audit timestamp: {auditTime}</span>
+              <span className="muted-text">
+                {t("Audit timestamp")}: {auditTime}
+              </span>
             )}
           </div>
-          <p className="mono">User: {updatedUser._id}</p>
+          <p className="mono">
+            {t("User")}: {updatedUser._id}
+          </p>
         </div>
       )}
     </section>

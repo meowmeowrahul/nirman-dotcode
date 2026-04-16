@@ -33,6 +33,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { getApiErrorMessage } from "../../api/error";
 import type { KycStatus } from "../../types/domain";
+import { useI18n } from "../../i18n/language";
 
 // Fix for default marker icon in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -59,12 +60,13 @@ function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
           lng: position.coords.longitude,
         });
       },
-      () => reject(new Error("Location permission denied"))
+      () => reject(new Error("Location permission denied")),
     );
   });
 }
 
 export function DashboardPage() {
+  const { t, tRole, tStatus, tCategory } = useI18n();
   const queryClient = useQueryClient();
   const role = useAuthStore((state) => state.role);
   const userId = useAuthStore((state) => state.userId);
@@ -74,10 +76,14 @@ export function DashboardPage() {
   const kycStatus = useAuthStore((state) => state.kycStatus);
   const setKycStatus = useAuthStore((state) => state.setKycStatus);
   const setUserStatus = useTransactionStore((state) => state.setUserStatus);
-  const activeTransaction = useTransactionStore((state) => state.activeTransaction);
-  const setActiveTransaction = useTransactionStore((state) => state.setActiveTransaction);
+  const activeTransaction = useTransactionStore(
+    (state) => state.activeTransaction,
+  );
+  const setActiveTransaction = useTransactionStore(
+    (state) => state.setActiveTransaction,
+  );
   const navigate = useNavigate();
-  const welcomeName = username?.trim() || "User";
+  const welcomeName = username?.trim() || t("User");
 
   const [wardenTab, setWardenTab] = useState("VERIFICATION");
   const [kycLookupInput, setKycLookupInput] = useState("");
@@ -90,7 +96,9 @@ export function DashboardPage() {
     "OVERPRICING" | "MISCONDUCT" | "SAFETY" | "FRAUD" | "OTHER"
   >("OTHER");
   const [complaintDescription, setComplaintDescription] = useState("");
-  const [complaintCreateError, setComplaintCreateError] = useState<string | null>(null);
+  const [complaintCreateError, setComplaintCreateError] = useState<
+    string | null
+  >(null);
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", userId],
@@ -190,7 +198,7 @@ export function DashboardPage() {
     },
     onError: (error) => {
       setKycActionError(
-        getApiErrorMessage(error, "Unable to update KYC status"),
+        getApiErrorMessage(error, t("Unable to update KYC status")),
       );
     },
   });
@@ -231,7 +239,9 @@ export function DashboardPage() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["transactions", userId] }),
-        queryClient.invalidateQueries({ queryKey: ["contributorNotifications", userId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["contributorNotifications", userId],
+        }),
       ]);
     },
   });
@@ -240,7 +250,9 @@ export function DashboardPage() {
     mutationFn: acceptOpenContributorRequest,
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["contributorNotifications", userId] }),
+        queryClient.invalidateQueries({
+          queryKey: ["contributorNotifications", userId],
+        }),
         queryClient.invalidateQueries({ queryKey: ["transactions", userId] }),
       ]);
     },
@@ -256,7 +268,9 @@ export function DashboardPage() {
       await refetchMyComplaints();
     },
     onError: (error) => {
-      setComplaintCreateError(getApiErrorMessage(error, "Unable to submit complaint"));
+      setComplaintCreateError(
+        getApiErrorMessage(error, t("Unable to submit complaint")),
+      );
     },
   });
 
@@ -268,11 +282,13 @@ export function DashboardPage() {
     mutationFn: setContributorListingToggle,
     onSuccess: () => {
       setListingError(null);
-      queryClient.invalidateQueries({ queryKey: ["myContributorListing", userId] });
+      queryClient.invalidateQueries({
+        queryKey: ["myContributorListing", userId],
+      });
     },
     onError: (error) => {
       setListingError(
-        getApiErrorMessage(error, "Unable to update Lend LPG toggle")
+        getApiErrorMessage(error, t("Unable to update Lend LPG toggle")),
       );
       setUserStatus("IDLE");
     },
@@ -286,7 +302,7 @@ export function DashboardPage() {
     const contributorTx = txData.transactions.find(
       (tx: any) =>
         tx?.contributor?.id === userId &&
-        ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"].includes(tx?.status)
+        ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"].includes(tx?.status),
     );
     setActiveTransaction(contributorTx || null);
 
@@ -300,7 +316,9 @@ export function DashboardPage() {
       return;
     }
 
-    const toggleEnabled = Boolean(contributorListingData?.listing?.toggle_enabled);
+    const toggleEnabled = Boolean(
+      contributorListingData?.listing?.toggle_enabled,
+    );
     const listingStatus = contributorListingData?.listing?.status;
     if (toggleEnabled && listingStatus === "LISTED" && !activeTransaction) {
       setUserStatus("ACTIVE_CONTRIBUTOR");
@@ -312,8 +330,11 @@ export function DashboardPage() {
     }
   }, [role, contributorListingData, activeTransaction, setUserStatus]);
 
-  const isContributorListed = contributorListingData?.listing?.status === "LISTED";
-  const isLendToggleEnabled = Boolean(contributorListingData?.listing?.toggle_enabled);
+  const isContributorListed =
+    contributorListingData?.listing?.status === "LISTED";
+  const isLendToggleEnabled = Boolean(
+    contributorListingData?.listing?.toggle_enabled,
+  );
 
   const handleLendLpgToggle = async (enabled: boolean) => {
     if (listingToggleMutation.isPending) {
@@ -337,7 +358,7 @@ export function DashboardPage() {
         coords = await getCurrentLocation();
       } catch (_error) {
         setListingNotice(
-          "Location unavailable. Listing is active using your saved region."
+          t("Location unavailable. Listing is active using your saved region."),
         );
       }
 
@@ -354,7 +375,9 @@ export function DashboardPage() {
     } catch (error) {
       setUserStatus("IDLE");
       setListingNotice(null);
-      setListingError(getApiErrorMessage(error, "Unable to access location"));
+      setListingError(
+        getApiErrorMessage(error, t("Unable to access location")),
+      );
     }
   };
 
@@ -375,7 +398,7 @@ export function DashboardPage() {
             className="oversight-text"
             style={{ fontSize: "0.8rem", color: "#2E7D32", fontWeight: 600 }}
           >
-            GOVERNMENT OVERSIGHT ACTIVE
+            {t("Government Oversight Active")}
           </p>
           <div
             style={{
@@ -385,14 +408,14 @@ export function DashboardPage() {
             }}
           >
             <h1 style={{ margin: "4px 0", fontSize: "2rem" }}>
-              Welcome {welcomeName}
+              {t("Welcome")} {welcomeName}
             </h1>
             {effectiveKycStatus === "VERIFIED" ? (
-              <StatusChip label="Verified Citizen" tone="success" />
+              <StatusChip label={t("Verified Citizen")} tone="success" />
             ) : effectiveKycStatus === "REJECTED" ? (
-              <StatusChip label="Verification Rejected" tone="error" />
+              <StatusChip label={t("Verification Rejected")} tone="error" />
             ) : (
-              <StatusChip label="Verification Pending" tone="warning" />
+              <StatusChip label={t("Verification Pending")} tone="warning" />
             )}
           </div>
         </header>
@@ -401,17 +424,19 @@ export function DashboardPage() {
           <section className="card" style={{ padding: "0.9rem 1rem" }}>
             {effectiveKycStatus === "VERIFIED" && (
               <p style={{ margin: 0, color: "#166534", fontWeight: 600 }}>
-                KYC approved by warden. You now have full access.
+                {t("KYC approved by warden. You now have full access.")}
               </p>
             )}
             {effectiveKycStatus === "REJECTED" && (
               <p style={{ margin: 0, color: "#b91c1c", fontWeight: 600 }}>
-                KYC rejected by warden. Update your documents and resubmit.
+                {t(
+                  "KYC rejected by warden. Update your documents and resubmit.",
+                )}
               </p>
             )}
             {effectiveKycStatus === "PENDING" && (
               <p style={{ margin: 0, color: "#92400e", fontWeight: 600 }}>
-                KYC submitted and awaiting warden review.
+                {t("KYC submitted and awaiting warden review.")}
               </p>
             )}
           </section>
@@ -438,7 +463,7 @@ export function DashboardPage() {
             }}
           >
             <h2 style={{ fontSize: "1.75rem", margin: "0 0 1rem 0" }}>
-              Lend LPG
+              {t("Lend LPG")}
             </h2>
             <p
               style={{
@@ -448,8 +473,9 @@ export function DashboardPage() {
                 lineHeight: "1.4",
               }}
             >
-              Have an extra cylinder? Support a neighbor in need and earn
-              community trust credits.
+              {t(
+                "Have an extra cylinder? Support a neighbor in need and earn community trust credits.",
+              )}
             </p>
 
             <label
@@ -459,7 +485,9 @@ export function DashboardPage() {
                 gap: "0.75rem",
                 marginBottom: "1rem",
                 fontWeight: 700,
-                cursor: listingToggleMutation.isPending ? "not-allowed" : "pointer",
+                cursor: listingToggleMutation.isPending
+                  ? "not-allowed"
+                  : "pointer",
               }}
             >
               <input
@@ -476,7 +504,8 @@ export function DashboardPage() {
                 }}
               />
               <span>
-                Lend LPG Toggle: {isLendToggleEnabled ? "ON" : "OFF"}
+                {t("Lend LPG Toggle")}:{" "}
+                {isLendToggleEnabled ? t("ON") : t("OFF")}
               </span>
             </label>
 
@@ -485,8 +514,16 @@ export function DashboardPage() {
             )}
 
             {isLendToggleEnabled && !isContributorListed && (
-              <p style={{ marginTop: "0.75rem", color: "#D1FAE5", fontWeight: 600 }}>
-                Toggle is ON. You may be temporarily unavailable while another active transaction is in progress.
+              <p
+                style={{
+                  marginTop: "0.75rem",
+                  color: "#D1FAE5",
+                  fontWeight: 600,
+                }}
+              >
+                {t(
+                  "Toggle is ON. You may be temporarily unavailable while another active transaction is in progress.",
+                )}
               </p>
             )}
             {listingError && (
@@ -526,7 +563,7 @@ export function DashboardPage() {
             }}
           >
             <h2 style={{ fontSize: "1.75rem", margin: "0 0 1rem 0" }}>
-              Request LPG
+              {t("Request LPG")}
             </h2>
             <p
               style={{
@@ -536,8 +573,9 @@ export function DashboardPage() {
                 lineHeight: "1.4",
               }}
             >
-              Running low? Broadcast a request to nearby neighbors for immediate
-              supply assistance.
+              {t(
+                "Running low? Broadcast a request to nearby neighbors for immediate supply assistance.",
+              )}
             </p>
             <button
               onClick={handleRequestLpgClick}
@@ -554,7 +592,7 @@ export function DashboardPage() {
                 gap: "0.5rem",
               }}
             >
-              Post Request <span aria-hidden="true">&#9873;</span>
+              {t("Post Request")} <span aria-hidden="true">&#9873;</span>
             </button>
           </div>
         </section>
@@ -574,7 +612,9 @@ export function DashboardPage() {
             (item) => item.type === "LOCK_ACK_REQUIRED",
           ) && (
             <section className="card stack" style={{ padding: "1rem" }}>
-              <h3 style={{ marginTop: 0 }}>Escrow Lock Acknowledgements</h3>
+              <h3 style={{ marginTop: 0 }}>
+                {t("Escrow Lock Acknowledgements")}
+              </h3>
               {contributorNotificationData.notifications
                 .filter((item) => item.type === "LOCK_ACK_REQUIRED")
                 .map((item) => (
@@ -591,17 +631,19 @@ export function DashboardPage() {
                       {item.message}
                     </p>
                     <p className="mono" style={{ marginTop: 0 }}>
-                      Transaction ID: {item.transaction_id}
+                      {t("Transaction ID")}: {item.transaction_id}
                     </p>
                     <button
                       type="button"
                       className="primary-btn"
-                      onClick={() => contributorAckMutation.mutate(item.transaction_id)}
+                      onClick={() =>
+                        contributorAckMutation.mutate(item.transaction_id)
+                      }
                       disabled={contributorAckMutation.isPending}
                     >
                       {contributorAckMutation.isPending
-                        ? "Acknowledging..."
-                        : "Acknowledge lock"}
+                        ? t("Acknowledging...")
+                        : t("Acknowledge lock")}
                     </button>
                   </div>
                 ))}
@@ -610,20 +652,23 @@ export function DashboardPage() {
 
         {role === "CONTRIBUTOR" && (
           <section className="card stack" style={{ padding: "1rem" }}>
-            <h3 style={{ marginTop: 0 }}>Nearby Emergency Request Notifications</h3>
+            <h3 style={{ marginTop: 0 }}>
+              {t("Nearby Emergency Request Notifications")}
+            </h3>
             {contributorNotificationsLoading && (
               <p className="muted-text" style={{ margin: 0 }}>
-                Checking nearby request notifications...
+                {t("Checking nearby request notifications...")}
               </p>
             )}
-            {!contributorNotificationsLoading && contributorNotificationsError && (
-              <p className="error-banner">
-                {getApiErrorMessage(
-                  contributorNotificationsError,
-                  "Unable to load nearby notifications",
-                )}
-              </p>
-            )}
+            {!contributorNotificationsLoading &&
+              contributorNotificationsError && (
+                <p className="error-banner">
+                  {getApiErrorMessage(
+                    contributorNotificationsError,
+                    t("Unable to load nearby notifications"),
+                  )}
+                </p>
+              )}
             {!contributorNotificationsLoading &&
               !contributorNotificationsError &&
               (contributorNotificationData?.notifications?.filter(
@@ -632,40 +677,51 @@ export function DashboardPage() {
                 contributorNotificationData.notifications
                   .filter((item) => item.type === "OPEN_REQUEST_BROADCAST")
                   .map((request) => (
-                  <div
-                    key={request.transaction_id}
-                    style={{
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 8,
-                      padding: "0.85rem",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>
-                      {request.message}
-                    </p>
-                    <p className="mono" style={{ margin: "0 0 0.35rem 0" }}>
-                      Transaction ID: {request.transaction_id}
-                    </p>
-                    <p className="muted-text" style={{ margin: "0 0 0.25rem 0" }}>
-                      Beneficiary ID: {request.beneficiary_user_id || "N/A"}
-                    </p>
-                    <p className="muted-text" style={{ margin: "0 0 0.6rem 0" }}>
-                      City: {request.city || city || "N/A"}
-                    </p>
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      onClick={() => acceptRequestMutation.mutate(request.transaction_id)}
-                      disabled={acceptRequestMutation.isPending}
+                    <div
+                      key={request.transaction_id}
+                      style={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: 8,
+                        padding: "0.85rem",
+                        marginBottom: "0.75rem",
+                      }}
                     >
-                      {acceptRequestMutation.isPending ? "Accepting..." : "Accept Request & Lend"}
-                    </button>
-                  </div>
-                ))
+                      <p style={{ margin: "0 0 0.5rem 0", fontWeight: 600 }}>
+                        {request.message}
+                      </p>
+                      <p className="mono" style={{ margin: "0 0 0.35rem 0" }}>
+                        {t("Transaction ID")}: {request.transaction_id}
+                      </p>
+                      <p
+                        className="muted-text"
+                        style={{ margin: "0 0 0.25rem 0" }}
+                      >
+                        {t("Beneficiary ID")}:{" "}
+                        {request.beneficiary_user_id || "N/A"}
+                      </p>
+                      <p
+                        className="muted-text"
+                        style={{ margin: "0 0 0.6rem 0" }}
+                      >
+                        {t("City")}: {request.city || city || "N/A"}
+                      </p>
+                      <button
+                        type="button"
+                        className="primary-btn"
+                        onClick={() =>
+                          acceptRequestMutation.mutate(request.transaction_id)
+                        }
+                        disabled={acceptRequestMutation.isPending}
+                      >
+                        {acceptRequestMutation.isPending
+                          ? t("Accepting...")
+                          : t("Accept Request & Lend")}
+                      </button>
+                    </div>
+                  ))
               ) : (
                 <p className="muted-text" style={{ margin: 0 }}>
-                  No nearby open emergency requests right now.
+                  {t("No nearby open emergency requests right now.")}
                 </p>
               ))}
           </section>
@@ -673,21 +729,25 @@ export function DashboardPage() {
 
         {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
           <section className="card stack" style={{ padding: "1rem" }}>
-            <h3 style={{ marginTop: 0 }}>Complaint Box</h3>
+            <h3 style={{ marginTop: 0 }}>{t("Complaint Box")}</h3>
             <p className="muted-text" style={{ marginTop: 0 }}>
-              Report misconduct or safety issues directly to the warden queue.
+              {t(
+                "Report misconduct or safety issues directly to the warden queue.",
+              )}
             </p>
             <div className="stack" style={{ gap: "0.65rem" }}>
               <label className="field">
-                <span>Accused User ID</span>
+                <span>{t("Accused User ID")}</span>
                 <input
                   value={complaintAccusedId}
-                  onChange={(event) => setComplaintAccusedId(event.target.value)}
-                  placeholder="Enter user ID"
+                  onChange={(event) =>
+                    setComplaintAccusedId(event.target.value)
+                  }
+                  placeholder={t("Enter user ID")}
                 />
               </label>
               <label className="field">
-                <span>Category</span>
+                <span>{t("Category")}</span>
                 <select
                   value={complaintCategory}
                   onChange={(event) =>
@@ -701,24 +761,30 @@ export function DashboardPage() {
                     )
                   }
                 >
-                  <option value="OVERPRICING">Overpricing</option>
-                  <option value="MISCONDUCT">Misconduct</option>
-                  <option value="SAFETY">Safety</option>
-                  <option value="FRAUD">Fraud</option>
-                  <option value="OTHER">Other</option>
+                  <option value="OVERPRICING">
+                    {tCategory("OVERPRICING")}
+                  </option>
+                  <option value="MISCONDUCT">{tCategory("MISCONDUCT")}</option>
+                  <option value="SAFETY">{tCategory("SAFETY")}</option>
+                  <option value="FRAUD">{tCategory("FRAUD")}</option>
+                  <option value="OTHER">{tCategory("OTHER")}</option>
                 </select>
               </label>
               <label className="field">
-                <span>Description</span>
+                <span>{t("Description")}</span>
                 <textarea
                   value={complaintDescription}
-                  onChange={(event) => setComplaintDescription(event.target.value)}
+                  onChange={(event) =>
+                    setComplaintDescription(event.target.value)
+                  }
                   rows={3}
-                  placeholder="Describe what happened"
+                  placeholder={t("Describe what happened")}
                 />
               </label>
             </div>
-            {complaintCreateError && <p className="error-banner">{complaintCreateError}</p>}
+            {complaintCreateError && (
+              <p className="error-banner">{complaintCreateError}</p>
+            )}
             <button
               type="button"
               className="primary-btn"
@@ -732,14 +798,20 @@ export function DashboardPage() {
               }}
               disabled={createComplaintMutation.isPending}
             >
-              {createComplaintMutation.isPending ? "Submitting complaint..." : "Submit Complaint"}
+              {createComplaintMutation.isPending
+                ? t("Submitting complaint...")
+                : t("Submit Complaint")}
             </button>
 
-            <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem" }}>
-              <h4 style={{ margin: "0 0 0.5rem 0" }}>My Complaint History</h4>
+            <div
+              style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem" }}
+            >
+              <h4 style={{ margin: "0 0 0.5rem 0" }}>
+                {t("My Complaint History")}
+              </h4>
               {myComplaintsLoading && (
                 <p className="muted-text" style={{ margin: 0 }}>
-                  Loading your complaints...
+                  {t("Loading your complaints...")}
                 </p>
               )}
               {!myComplaintsLoading &&
@@ -747,7 +819,8 @@ export function DashboardPage() {
                   myComplaintData.complaints.slice(0, 5).map((item) => (
                     <div key={item.id} style={{ marginBottom: "0.55rem" }}>
                       <p className="mono" style={{ margin: "0 0 0.2rem 0" }}>
-                        #{item.id.slice(-6)} • {item.category} • {item.status}
+                        #{item.id.slice(-6)} • {tCategory(item.category)} •{" "}
+                        {tStatus(item.status)}
                       </p>
                       <p className="muted-text" style={{ margin: 0 }}>
                         {item.description}
@@ -756,7 +829,7 @@ export function DashboardPage() {
                   ))
                 ) : (
                   <p className="muted-text" style={{ margin: 0 }}>
-                    No complaints filed yet.
+                    {t("No complaints filed yet.")}
                   </p>
                 ))}
             </div>
@@ -789,7 +862,7 @@ export function DashboardPage() {
               }}
             >
               <h3 style={{ margin: 0, fontSize: "1.2rem" }}>
-                Transaction History
+                {t("Transaction History")}
               </h3>
               <a
                 href="#"
@@ -800,7 +873,7 @@ export function DashboardPage() {
                   fontWeight: "bold",
                 }}
               >
-                View All
+                {t("View All")}
               </a>
             </div>
             <div
@@ -808,17 +881,17 @@ export function DashboardPage() {
               style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
             >
               {txLoading ? (
-                <p style={{ color: "#666" }}>Loading transactions...</p>
+                <p style={{ color: "#666" }}>{t("Loading transactions...")}</p>
               ) : txData?.transactions && txData.transactions.length > 0 ? (
                 txData.transactions.slice(0, 5).map((tx: any) => {
                   const isLent = tx.contributor?.id === userId;
                   const partnerName = isLent
                     ? tx.beneficiary?.email ||
                       tx.beneficiary?.phone ||
-                      "Neighbor"
+                      t("Neighbor")
                     : tx.contributor?.email ||
                       tx.contributor?.phone ||
-                      "Neighbor";
+                      t("Neighbor");
                   const timeAgo = formatDistanceToNow(
                     new Date(tx.created_at || new Date()),
                     { addSuffix: true },
@@ -864,8 +937,8 @@ export function DashboardPage() {
                             }}
                           >
                             {isLent
-                              ? `Lent to ${partnerName}`
-                              : `Borrowed from ${partnerName}`}
+                              ? `${t("Lent to")} ${partnerName}`
+                              : `${t("Borrowed from")} ${partnerName}`}
                           </p>
                           <p
                             style={{
@@ -874,19 +947,20 @@ export function DashboardPage() {
                               color: "#666",
                             }}
                           >
-                            {timeAgo} • {tx.city || tx.region_id || "Local Hub"}
+                            {timeAgo} •{" "}
+                            {tx.city || tx.region_id || t("Local Hub")}
                           </p>
                         </div>
                       </div>
                       <StatusChip
-                        label={tx.status}
+                        label={tStatus(tx.status)}
                         tone={tx.status === "COMPLETED" ? "success" : "pending"}
                       />
                     </div>
                   );
                 })
               ) : (
-                <p style={{ color: "#666" }}>No recent transactions.</p>
+                <p style={{ color: "#666" }}>{t("No recent transactions.")}</p>
               )}
             </div>
           </div>
@@ -903,7 +977,7 @@ export function DashboardPage() {
             }}
           >
             <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.2rem" }}>
-              Live Supply Map
+              {t("Live Supply Map")}
             </h3>
             <div
               style={{
@@ -931,9 +1005,9 @@ export function DashboardPage() {
                       position={[req.lat, req.lng]}
                     >
                       <Popup>
-                        <b>Active Request</b>
+                        <b>{t("Active Request")}</b>
                         <br />
-                        Status: {req.status}
+                        {t("Status")}: {tStatus(req.status)}
                       </Popup>
                     </Marker>
                   ))}
@@ -946,7 +1020,7 @@ export function DashboardPage() {
                       position={[contrib.lat, contrib.lng]}
                     >
                       <Popup>
-                        <b>Available Contributor</b>
+                        <b>{t("Available Contributor")}</b>
                       </Popup>
                     </Marker>
                   ))}
@@ -957,7 +1031,7 @@ export function DashboardPage() {
                     !mapData.available_contributors?.length)) && (
                   <Marker position={[18.5204, 73.8567]}>
                     <Popup>
-                      Pune <br /> Active Hub
+                      Pune <br /> {t("Active Hub")}
                     </Popup>
                   </Marker>
                 )}
@@ -972,10 +1046,10 @@ export function DashboardPage() {
   // WARDEN Dashboard
   if (role === "WARDEN") {
     const wardenTabs = [
-      { id: "VERIFICATION", label: "Verification" },
-      { id: "TRANSACTIONS", label: "Transactions" },
-      { id: "TECHNICIANS", label: "Technicians" },
-      { id: "COMPLAINTS", label: "Complaint Portal" },
+      { id: "VERIFICATION", label: t("Verification") },
+      { id: "TRANSACTIONS", label: t("Transactions") },
+      { id: "TECHNICIANS", label: t("Technicians") },
+      { id: "COMPLAINTS", label: t("Complaint Portal") },
     ];
 
     const renderWardenContent = () => {
@@ -990,7 +1064,7 @@ export function DashboardPage() {
               }}
             >
               <h3 style={{ color: "#E65100", marginTop: 0 }}>
-                KYC Verification Review
+                {t("KYC Verification Review")}
               </h3>
               <p
                 style={{
@@ -999,8 +1073,9 @@ export function DashboardPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                Search a user by ID to review submitted KYC documents and update
-                verification status.
+                {t(
+                  "Search a user by ID to review submitted KYC documents and update verification status.",
+                )}
               </p>
 
               <div
@@ -1014,7 +1089,7 @@ export function DashboardPage() {
                 <input
                   value={kycLookupInput}
                   onChange={(event) => setKycLookupInput(event.target.value)}
-                  placeholder="Enter user ID"
+                  placeholder={t("Enter user ID")}
                   style={{
                     flex: 1,
                     padding: "0.7rem 0.9rem",
@@ -1039,7 +1114,7 @@ export function DashboardPage() {
                     fontWeight: "bold",
                   }}
                 >
-                  Load Application
+                  {t("Load Application")}
                 </button>
               </div>
 
@@ -1060,13 +1135,13 @@ export function DashboardPage() {
                     fontWeight: 700,
                   }}
                 >
-                  Pending KYC Queue
+                  {t("Pending KYC Queue")}
                 </p>
                 {pendingKycLoading && (
                   <p
                     style={{ margin: 0, color: "#9a3412", fontSize: "0.85rem" }}
                   >
-                    Loading pending applications...
+                    {t("Loading pending applications...")}
                   </p>
                 )}
                 {!pendingKycLoading && pendingKycError && (
@@ -1075,7 +1150,7 @@ export function DashboardPage() {
                   >
                     {getApiErrorMessage(
                       pendingKycError,
-                      "Unable to load pending KYC queue",
+                      t("Unable to load pending KYC queue"),
                     )}
                   </p>
                 )}
@@ -1127,20 +1202,22 @@ export function DashboardPage() {
                         fontSize: "0.85rem",
                       }}
                     >
-                      No pending KYC applications for this region.
+                      {t("No pending KYC applications for this region.")}
                     </p>
                   ))}
               </div>
 
               {wardenKycLoading && (
-                <p style={{ margin: 0, color: "#666" }}>Loading KYC form...</p>
+                <p style={{ margin: 0, color: "#666" }}>
+                  {t("Loading KYC form...")}
+                </p>
               )}
 
               {!wardenKycLoading && wardenKycError && (
                 <p style={{ margin: 0, color: "#C62828" }}>
                   {getApiErrorMessage(
                     wardenKycError,
-                    "Unable to load KYC form",
+                    t("Unable to load KYC form"),
                   )}
                 </p>
               )}
@@ -1175,7 +1252,7 @@ export function DashboardPage() {
                           }}
                         >
                           {wardenKycForm.kyc_form.user?.name ||
-                            "Citizen Applicant"}
+                            t("Citizen Applicant")}
                         </h4>
                         <p
                           style={{
@@ -1184,7 +1261,8 @@ export function DashboardPage() {
                             fontSize: "0.9rem",
                           }}
                         >
-                          User ID: {wardenKycForm.kyc_form.user?.id || "N/A"}
+                          {t("User ID")}:{" "}
+                          {wardenKycForm.kyc_form.user?.id || "N/A"}
                         </p>
                         <p
                           style={{
@@ -1193,7 +1271,7 @@ export function DashboardPage() {
                             fontSize: "0.9rem",
                           }}
                         >
-                          Submitted:{" "}
+                          {t("Submitted")}:{" "}
                           {formatDistanceToNow(
                             new Date(wardenKycForm.kyc_form.submitted_at),
                             { addSuffix: true },
@@ -1201,10 +1279,10 @@ export function DashboardPage() {
                         </p>
                         <div style={{ marginTop: "0.6rem" }}>
                           <StatusChip
-                            label={
+                            label={tStatus(
                               wardenKycForm.kyc_form.user?.kyc_status ||
-                              "PENDING"
-                            }
+                                "PENDING",
+                            )}
                             tone={
                               wardenKycForm.kyc_form.user?.kyc_status ===
                               "VERIFIED"
@@ -1248,7 +1326,7 @@ export function DashboardPage() {
                             fontWeight: "bold",
                           }}
                         >
-                          Verify
+                          {t("Verify")}
                         </button>
                         <button
                           type="button"
@@ -1273,7 +1351,7 @@ export function DashboardPage() {
                             fontWeight: "bold",
                           }}
                         >
-                          Reject
+                          {t("Reject")}
                         </button>
                         <button
                           type="button"
@@ -1298,7 +1376,7 @@ export function DashboardPage() {
                             fontWeight: "bold",
                           }}
                         >
-                          Mark Pending
+                          {t("Mark Pending")}
                         </button>
                       </div>
                     </div>
@@ -1323,7 +1401,7 @@ export function DashboardPage() {
                         rel="noreferrer"
                         style={{ color: "#1565C0" }}
                       >
-                        View Aadhaar Document
+                        {t("View Aadhaar Document")}
                       </a>
                       <a
                         href={wardenKycForm.kyc_form.pan_doc_photo.url}
@@ -1331,7 +1409,7 @@ export function DashboardPage() {
                         rel="noreferrer"
                         style={{ color: "#1565C0" }}
                       >
-                        View PAN Document
+                        {t("View PAN Document")}
                       </a>
                       <a
                         href={wardenKycForm.kyc_form.verification_selfie.url}
@@ -1339,7 +1417,7 @@ export function DashboardPage() {
                         rel="noreferrer"
                         style={{ color: "#1565C0" }}
                       >
-                        View Verification Selfie
+                        {t("View Verification Selfie")}
                       </a>
                     </div>
                   </div>
@@ -1356,7 +1434,7 @@ export function DashboardPage() {
               }}
             >
               <h3 style={{ color: "#1565C0", marginTop: 0 }}>
-                Region Transactions
+                {t("Region Transactions")}
               </h3>
               <p
                 style={{
@@ -1365,19 +1443,19 @@ export function DashboardPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                List of LPG transactions between Lenders and Receivers
+                {t("List of LPG transactions between Lenders and Receivers")}
               </p>
               <div style={{ display: "grid", gap: "1rem" }}>
                 {regionalActivityLoading && (
                   <p style={{ margin: 0, color: "#666" }}>
-                    Loading regional transactions...
+                    {t("Loading regional transactions...")}
                   </p>
                 )}
                 {!regionalActivityLoading && regionalActivityError && (
                   <p style={{ margin: 0, color: "#C62828" }}>
                     {getApiErrorMessage(
                       regionalActivityError,
-                      "Unable to load regional activity",
+                      t("Unable to load regional activity"),
                     )}
                   </p>
                 )}
@@ -1410,13 +1488,13 @@ export function DashboardPage() {
                             <span
                               style={{ fontWeight: "bold", color: "#1565C0" }}
                             >
-                              Region {entry.region}
+                              {t("Region")} {entry.region}
                             </span>
                             <span style={{ color: "#999" }}>&rarr;</span>
                             <span
                               style={{ fontWeight: "bold", color: "#006A4E" }}
                             >
-                              Tech {entry.technicianName}
+                              {t("Tech")} {entry.technicianName}
                             </span>
                           </div>
                           <p
@@ -1426,12 +1504,12 @@ export function DashboardPage() {
                               fontSize: "0.9rem",
                             }}
                           >
-                            Manual {entry.manualWeightKg}kg • OCR{" "}
+                            {t("Manual")} {entry.manualWeightKg}kg • OCR{" "}
                             {entry.ocrWeightKg}kg
                           </p>
                         </div>
                         <StatusChip
-                          label={entry.status}
+                          label={tStatus(entry.status)}
                           tone={
                             entry.status === "COMPLETED"
                               ? "success"
@@ -1444,7 +1522,7 @@ export function DashboardPage() {
                     ))
                   ) : (
                     <p style={{ margin: 0, color: "#666" }}>
-                      No regional transactions found.
+                      {t("No regional transactions found.")}
                     </p>
                   ))}
               </div>
@@ -1460,7 +1538,7 @@ export function DashboardPage() {
               }}
             >
               <h3 style={{ color: "#2E7D32", marginTop: 0 }}>
-                Area Technicians
+                {t("Area Technicians")}
               </h3>
               <p
                 style={{
@@ -1469,19 +1547,20 @@ export function DashboardPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                List of all available technicians in the area and their
-                information
+                {t(
+                  "List of all available technicians in the area and their information",
+                )}
               </p>
               {technicianLoading && (
                 <p style={{ margin: "0 0 1rem 0", color: "#166534" }}>
-                  Loading technicians...
+                  {t("Loading technicians...")}
                 </p>
               )}
               {!technicianLoading && technicianError && (
                 <p style={{ margin: "0 0 1rem 0", color: "#C62828" }}>
                   {getApiErrorMessage(
                     technicianError,
-                    "Unable to load technician availability",
+                    t("Unable to load technician availability"),
                   )}
                 </p>
               )}
@@ -1525,7 +1604,7 @@ export function DashboardPage() {
                             {item.name}
                           </h4>
                           <StatusChip
-                            label={item.status}
+                            label={tStatus(item.status)}
                             tone={
                               item.status === "AVAILABLE"
                                 ? "success"
@@ -1547,7 +1626,7 @@ export function DashboardPage() {
                             <span aria-hidden="true">&#9733;</span>{" "}
                             {item.rating !== null
                               ? `${item.rating.toFixed(1)} / 5.0`
-                              : "Not rated"}
+                              : t("Not rated")}
                           </p>
                           <p
                             style={{
@@ -1577,13 +1656,13 @@ export function DashboardPage() {
                             opacity: 0.7,
                           }}
                         >
-                          City: {item.city || item.region_id || "N/A"}
+                          {t("City")}: {item.city || item.region_id || "N/A"}
                         </button>
                       </div>
                     ))
                   ) : (
                     <p style={{ margin: 0, color: "#166534" }}>
-                      No technicians found for this region.
+                      {t("No technicians found for this region.")}
                     </p>
                   ))}
               </div>
@@ -1599,7 +1678,7 @@ export function DashboardPage() {
               }}
             >
               <h3 style={{ color: "#C62828", marginTop: 0 }}>
-                Complaint Portal
+                {t("Complaint Portal")}
               </h3>
               <p
                 style={{
@@ -1608,18 +1687,18 @@ export function DashboardPage() {
                   fontSize: "0.9rem",
                 }}
               >
-                List of complaints against Users from other Users
+                {t("List of complaints against Users from other Users")}
               </p>
               {complaintLoading && (
                 <p style={{ margin: "0 0 1rem 0", color: "#991b1b" }}>
-                  Loading complaints...
+                  {t("Loading complaints...")}
                 </p>
               )}
               {!complaintLoading && complaintError && (
                 <p style={{ margin: "0 0 1rem 0", color: "#C62828" }}>
                   {getApiErrorMessage(
                     complaintError,
-                    "Unable to load complaints",
+                    t("Unable to load complaints"),
                   )}
                 </p>
               )}
@@ -1649,7 +1728,8 @@ export function DashboardPage() {
                               fontSize: "1.1rem",
                             }}
                           >
-                            Report #{item.id.slice(-6)}: {item.category}
+                            {t("Report")} #{item.id.slice(-6)}:{" "}
+                            {tCategory(item.category)}
                           </h4>
                           <div
                             style={{
@@ -1665,7 +1745,7 @@ export function DashboardPage() {
                                 fontSize: "0.9rem",
                               }}
                             >
-                              <b>Reporter:</b> {item.reporter_user_id}
+                              <b>{t("Reporter")}:</b> {item.reporter_user_id}
                             </p>
                             <p
                               style={{
@@ -1674,7 +1754,7 @@ export function DashboardPage() {
                                 fontSize: "0.9rem",
                               }}
                             >
-                              <b>Accused:</b> {item.accused_user_id}
+                              <b>{t("Accused")}:</b> {item.accused_user_id}
                             </p>
                             <p
                               style={{
@@ -1683,7 +1763,7 @@ export function DashboardPage() {
                                 fontSize: "0.9rem",
                               }}
                             >
-                              <b>Status:</b> {item.status}
+                              <b>{t("Status")}:</b> {tStatus(item.status)}
                             </p>
                             <p
                               style={{
@@ -1692,7 +1772,7 @@ export function DashboardPage() {
                                 fontSize: "0.9rem",
                               }}
                             >
-                              <b>Filed:</b>{" "}
+                              <b>{t("Filed")}:</b>{" "}
                               {formatDistanceToNow(new Date(item.created_at), {
                                 addSuffix: true,
                               })}
@@ -1725,14 +1805,14 @@ export function DashboardPage() {
                           }}
                         >
                           {item.status === "UNDER_REVIEW"
-                            ? "Under Review"
-                            : "Review Match"}
+                            ? t("Under Review")
+                            : t("Review Match")}
                         </button>
                       </div>
                     ))
                   ) : (
                     <p style={{ margin: 0, color: "#991b1b" }}>
-                      No complaints found for this region.
+                      {t("No complaints found for this region.")}
                     </p>
                   ))}
               </div>
@@ -1762,7 +1842,7 @@ export function DashboardPage() {
               marginBottom: "0.5rem",
             }}
           >
-            WARDEN CONTROL CENTER
+            {t("WARDEN CONTROL CENTER")}
           </p>
           <div
             style={{
@@ -1772,9 +1852,9 @@ export function DashboardPage() {
             }}
           >
             <h1 style={{ margin: "0", fontSize: "2rem", color: "#1e293b" }}>
-              Welcome Warden {welcomeName}
+              {t("Welcome Warden")} {welcomeName}
             </h1>
-            <StatusChip label="Active Duty" tone="info" />
+            <StatusChip label={t("Active Duty")} tone="info" />
           </div>
         </header>
 
@@ -1822,20 +1902,22 @@ export function DashboardPage() {
   return (
     <section className="card">
       <PageHeader
-        title="Role Dashboard"
-        subtitle="Use the top navigation to continue your assigned workflow."
+        title={t("Role Dashboard")}
+        subtitle={t(
+          "Use the top navigation to continue your assigned workflow.",
+        )}
       />
       <div className="info-grid">
         <div>
-          <p className="muted-text">Role</p>
-          <p className="mono">{role}</p>
+          <p className="muted-text">{t("Role")}</p>
+          <p className="mono">{role ? tRole(role) : "-"}</p>
         </div>
         <div>
-          <p className="muted-text">User ID</p>
+          <p className="muted-text">{t("User ID")}</p>
           <p className="mono">{userId}</p>
         </div>
         <div>
-          <p className="muted-text">Region ID</p>
+          <p className="muted-text">{t("Region ID")}</p>
           <p className="mono">{city || regionId || "N/A"}</p>
         </div>
       </div>

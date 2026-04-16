@@ -3,8 +3,10 @@ import { useAuthStore } from "../../store/authStore";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMyProfile } from "../../api/endpoints";
+import { useI18n } from "../../i18n/language";
 
 export function ProfilePage() {
+  const { t, tRole, tStatus } = useI18n();
   const navigate = useNavigate();
   const role = useAuthStore((state) => state.role);
   const userId = useAuthStore((state) => state.userId);
@@ -32,7 +34,8 @@ export function ProfilePage() {
     role == "BENEFICIARY" || role == "CONTRIBUTOR" ? "CITIZEN" : role;
   const displayUserId = userId || "-";
   const displayCity = city || "-";
-  const displayKycStatus = myProfileData?.user?.kyc?.status || kycStatus || "PENDING";
+  const displayKycStatus =
+    myProfileData?.user?.kyc?.status || kycStatus || "PENDING";
   const statusIsVerified = displayKycStatus === "VERIFIED";
   const statusBg = statusIsVerified ? "#DEF7EC" : "#FEF3C7";
   const statusText = statusIsVerified ? "#03543F" : "#9B1C1C";
@@ -48,10 +51,10 @@ export function ProfilePage() {
     >
       <div style={{ marginBottom: "18px" }}>
         <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#111827" }}>
-          User Profile
+          {t("User Profile")}
         </h1>
         <p style={{ fontSize: "14px", color: "#6B7280", marginTop: "6px" }}>
-          View your account details and keep verification up to date.
+          {t("View your account details and keep verification up to date.")}
         </p>
       </div>
 
@@ -93,11 +96,19 @@ export function ProfilePage() {
               {profileInitial}
             </div>
             <div>
-              <div style={{ fontSize: "18px", fontWeight: "600", color: "#111827" }}>
+              <div
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "600",
+                  color: "#111827",
+                }}
+              >
                 {displayName}
               </div>
-              <div style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}>
-                {displayRole}
+              <div
+                style={{ fontSize: "13px", color: "#6B7280", marginTop: "2px" }}
+              >
+                {tRole(displayRole)}
               </div>
             </div>
           </div>
@@ -113,7 +124,7 @@ export function ProfilePage() {
               letterSpacing: "0.2px",
             }}
           >
-            KYC {displayKycStatus}
+            {t("KYC")} {tStatus(displayKycStatus)}
           </span>
         </div>
 
@@ -132,10 +143,18 @@ export function ProfilePage() {
               padding: "12px 14px",
             }}
           >
-            <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
-              User ID
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#6B7280",
+                marginBottom: "4px",
+              }}
+            >
+              {t("User ID")}
             </div>
-            <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
+            <div
+              style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}
+            >
               {displayUserId}
             </div>
           </div>
@@ -147,10 +166,18 @@ export function ProfilePage() {
               padding: "12px 14px",
             }}
           >
-            <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
-              City
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#6B7280",
+                marginBottom: "4px",
+              }}
+            >
+              {t("City")}
             </div>
-            <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
+            <div
+              style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}
+            >
               {displayCity}
             </div>
           </div>
@@ -162,11 +189,19 @@ export function ProfilePage() {
               padding: "12px 14px",
             }}
           >
-            <div style={{ fontSize: "12px", color: "#6B7280", marginBottom: "4px" }}>
-              Role
+            <div
+              style={{
+                fontSize: "12px",
+                color: "#6B7280",
+                marginBottom: "4px",
+              }}
+            >
+              {t("Role")}
             </div>
-            <div style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}>
-              {displayRole}
+            <div
+              style={{ fontSize: "15px", color: "#111827", fontWeight: "500" }}
+            >
+              {tRole(displayRole)}
             </div>
           </div>
         </div>
@@ -184,7 +219,7 @@ export function ProfilePage() {
             }}
           >
             <p style={{ fontSize: "14px", color: "#4B5563", margin: 0 }}>
-              Complete your KYC to unlock full account access.
+              {t("Complete your KYC to unlock full account access.")}
             </p>
             <button
               onClick={() => navigate("/kyc-completion")}
@@ -200,7 +235,7 @@ export function ProfilePage() {
                 boxShadow: "0 8px 18px rgba(37,99,235,0.25)",
               }}
             >
-              Complete KYC Form
+              {t("Complete KYC Form")}
             </button>
           </div>
         )}
@@ -213,7 +248,7 @@ export function ProfilePage() {
             }}
           >
             <p style={{ margin: 0, color: "#065F46", fontWeight: 600 }}>
-              Warden has approved your KYC submission.
+              {t("Warden has approved your KYC submission.")}
             </p>
           </div>
         )}
@@ -226,7 +261,9 @@ export function ProfilePage() {
             }}
           >
             <p style={{ margin: 0, color: "#B91C1C", fontWeight: 600 }}>
-              Warden rejected your KYC. Please resubmit updated documents.
+              {t(
+                "Warden rejected your KYC. Please resubmit updated documents.",
+              )}
             </p>
           </div>
         )}

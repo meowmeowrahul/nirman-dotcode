@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
 const User = require("../models/User");
 const { calculateFinalGasPayout } = require("../services/escrowFinanceService");
+const {
+  createNotification,
+  createNotificationsByUserFilter,
+} = require("../services/notificationService");
 
 const ACTIVE_HOLDING_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
 
@@ -43,14 +47,20 @@ async function listOpenRequests(req, res, next) {
 
     const requests = rows.map((tx) => ({
       transaction_id: String(tx._id),
-      beneficiary_user_id: tx.beneficiary_id ? String(tx.beneficiary_id._id) : null,
-      city: tx.city || tx.region_id || tx.beneficiary_id?.city || tx.beneficiary_id?.region_id || null,
+      beneficiary_user_id: tx.beneficiary_id
+        ? String(tx.beneficiary_id._id)
+        : null,
+      city:
+        tx.city ||
+        tx.region_id ||
+        tx.beneficiary_id?.city ||
+        tx.beneficiary_id?.region_id ||
+        null,
       created_at: tx.createdAt,
       beneficiary_contact: tx.beneficiary_id
         ? tx.beneficiary_id.phone || tx.beneficiary_id.email || null
         : null,
-      message:
-        "Emergency LPG request is nearby. You can accept and lend now.",
+      message: "Emergency LPG request is nearby. You can accept and lend now.",
     }));
 
     return res.status(200).json({ requests });
@@ -69,7 +79,9 @@ async function acceptOpenRequest(req, res, next) {
     }
 
     if (!validateObjectId(transaction_id)) {
-      return res.status(400).json({ error: "valid transaction_id is required" });
+      return res
+        .status(400)
+        .json({ error: "valid transaction_id is required" });
     }
 
     const contributor = await User.findById(contributorId)
@@ -85,7 +97,9 @@ async function acceptOpenRequest(req, res, next) {
     const contributorActiveTx = await Transaction.findOne({
       contributor_id: contributorId,
       status: { $in: ACTIVE_HOLDING_STATUSES },
-    }).select("_id status").lean();
+    })
+      .select("_id status")
+      .lean();
 
     if (contributorActiveTx) {
       return res.status(409).json({
@@ -112,16 +126,30 @@ async function acceptOpenRequest(req, res, next) {
           },
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!tx) {
-      return res.status(409).json({ error: "request already accepted or unavailable" });
+      return res
+        .status(409)
+        .json({ error: "request already accepted or unavailable" });
     }
 
     await User.findByIdAndUpdate(contributorId, {
       $set: {
         "contributor_listing.status": "UNLISTED",
+      },
+    });
+
+    await createNotification({
+      recipientUserId: String(tx.beneficiary_id),
+      type: "LEND_REQUEST_ACCEPTED",
+      title: "LPG Request Accepted",
+      message: "Your To Lend LPG request has been accepted by a contributor.",
+      meta: {
+        transaction_id: String(tx._id),
+        contributor_id: String(contributorId),
+        city: tx.city || tx.region_id || null,
       },
     });
 
@@ -136,11 +164,15 @@ async function lockEscrow(req, res, next) {
     const { beneficiary_id, contributor_id, city, region_id } = req.body;
 
     if (!beneficiary_id || !validateObjectId(beneficiary_id)) {
-      return res.status(400).json({ error: "valid beneficiary_id is required" });
+      return res
+        .status(400)
+        .json({ error: "valid beneficiary_id is required" });
     }
 
     if (contributor_id && !validateObjectId(contributor_id)) {
-      return res.status(400).json({ error: "contributor_id must be a valid ObjectId" });
+      return res
+        .status(400)
+        .json({ error: "contributor_id must be a valid ObjectId" });
     }
 
     const existingActive = await Transaction.findOne({
@@ -152,12 +184,13 @@ async function lockEscrow(req, res, next) {
       return res.status(200).json({
         transaction: existingActive,
         reused_existing: true,
-        message:
-          "active transaction already holds metal security deposit",
+        message: "active transaction already holds metal security deposit",
       });
     }
 
-    const beneficiary = await User.findById(beneficiary_id).select("city region_id").lean();
+    const beneficiary = await User.findById(beneficiary_id)
+      .select("city region_id")
+      .lean();
     if (!beneficiary) {
       return res.status(404).json({ error: "beneficiary user not found" });
     }
@@ -170,28 +203,29 @@ async function lockEscrow(req, res, next) {
       null;
 
     let assignedContributorId = contributor_id || null;
-    let contributorAcknowledgement =
-      contributor_id
-        ? {
-            status: "PENDING",
-            message:
-              "Escrow has been locked for your listing. A technician will verify and continue the handover process.",
-            sent_at: new Date(),
-            acknowledged_at: null,
-          }
-        : {
-            status: null,
-            message: null,
-            sent_at: null,
-            acknowledged_at: null,
-          };
+    let contributorAcknowledgement = contributor_id
+      ? {
+          status: "PENDING",
+          message:
+            "Escrow has been locked for your listing. A technician will verify and continue the handover process.",
+          sent_at: new Date(),
+          acknowledged_at: null,
+        }
+      : {
+          status: null,
+          message: null,
+          sent_at: null,
+          acknowledged_at: null,
+        };
 
     let assignmentWarning = null;
     if (contributor_id) {
       const contributorActiveTx = await Transaction.findOne({
         contributor_id,
         status: { $in: ACTIVE_HOLDING_STATUSES },
-      }).select("_id status").lean();
+      })
+        .select("_id status")
+        .lean();
 
       if (contributorActiveTx) {
         assignedContributorId = null;
@@ -228,6 +262,19 @@ async function lockEscrow(req, res, next) {
       });
     }
 
+    await createNotificationsByUserFilter({
+      userFilter: {},
+      type: "LPG_REQUEST_CREATED",
+      title: "New LPG Request",
+      message:
+        "A user has requested LPG. Check request details in your dashboard.",
+      meta: {
+        transaction_id: String(tx._id),
+        city: tx.city || tx.region_id || null,
+        beneficiary_id: String(beneficiary_id),
+      },
+    });
+
     return res.status(201).json({
       transaction: tx,
       assignment_warning: assignmentWarning,
@@ -242,7 +289,9 @@ async function calculateEscrow(req, res, next) {
     const { transaction_id, actual_gas_kg } = req.body;
 
     if (!transaction_id || !validateObjectId(transaction_id)) {
-      return res.status(400).json({ error: "valid transaction_id is required" });
+      return res
+        .status(400)
+        .json({ error: "valid transaction_id is required" });
     }
 
     if (actual_gas_kg === undefined || actual_gas_kg === null) {
@@ -255,10 +304,16 @@ async function calculateEscrow(req, res, next) {
     }
 
     if (tx.status !== "PAID_IN_ESCROW") {
-      return res.status(400).json({ error: "invalid state transition: calculation requires PAID_IN_ESCROW" });
+      return res
+        .status(400)
+        .json({
+          error:
+            "invalid state transition: calculation requires PAID_IN_ESCROW",
+        });
     }
 
-    const { isOverweight, finalGasPayout } = calculateFinalGasPayout(actual_gas_kg);
+    const { isOverweight, finalGasPayout } =
+      calculateFinalGasPayout(actual_gas_kg);
 
     tx.escrow.final_gas_payout = finalGasPayout;
 
@@ -287,7 +342,9 @@ async function releaseEscrow(req, res, next) {
     const { transaction_id, serial_number } = req.body;
 
     if (!transaction_id || !validateObjectId(transaction_id)) {
-      return res.status(400).json({ error: "valid transaction_id is required" });
+      return res
+        .status(400)
+        .json({ error: "valid transaction_id is required" });
     }
 
     const tx = await Transaction.findById(transaction_id);
@@ -296,24 +353,39 @@ async function releaseEscrow(req, res, next) {
     }
 
     if (!["VERIFIED", "IN_TRANSIT", "COMPLETED"].includes(tx.status)) {
-      return res.status(400).json({ error: "invalid state transition: release requires VERIFIED, IN_TRANSIT or COMPLETED" });
+      return res
+        .status(400)
+        .json({
+          error:
+            "invalid state transition: release requires VERIFIED, IN_TRANSIT or COMPLETED",
+        });
     }
 
-    const expectedSerial = tx.cylinder_evidence && tx.cylinder_evidence.serial_number;
+    const expectedSerial =
+      tx.cylinder_evidence && tx.cylinder_evidence.serial_number;
     if (expectedSerial !== null && expectedSerial !== undefined) {
-      if (typeof serial_number !== "string" || serial_number !== expectedSerial) {
+      if (
+        typeof serial_number !== "string" ||
+        serial_number !== expectedSerial
+      ) {
         return res.status(409).json({ error: "serial number mismatch" });
       }
     }
 
     tx.status = "COMPLETED";
-    if (tx.escrow.refund_to_beneficiary === null || tx.escrow.refund_to_beneficiary === undefined) {
+    if (
+      tx.escrow.refund_to_beneficiary === null ||
+      tx.escrow.refund_to_beneficiary === undefined
+    ) {
       tx.escrow.refund_to_beneficiary = tx.escrow.metal_security_deposit;
     }
 
-    if (tx.escrow.final_gas_payout === null || tx.escrow.final_gas_payout === undefined) {
+    if (
+      tx.escrow.final_gas_payout === null ||
+      tx.escrow.final_gas_payout === undefined
+    ) {
       tx.escrow.final_gas_payout = Number(
-        (tx.escrow.gas_value_deposited - tx.escrow.service_fee).toFixed(2)
+        (tx.escrow.gas_value_deposited - tx.escrow.service_fee).toFixed(2),
       );
     }
 

@@ -18,15 +18,19 @@ import {
   MapPin,
   Building,
 } from "lucide-react";
+import { translateStatic, useI18n } from "../../i18n/language";
 import "./auth.css";
 
 const registerSchema = z
   .object({
     role: z.enum(["BENEFICIARY", "CONTRIBUTOR", "TECHNICIAN", "WARDEN"]),
-    name: z.string().trim().min(2, "Full name is required"),
-    identity: z.string().trim().min(3, "Enter valid mobile or email"),
-    password: z.string().min(1, "Password is required"),
-    city: z.string().trim().min(1, "City is required"),
+    name: z.string().trim().min(2, translateStatic("Full name is required")),
+    identity: z
+      .string()
+      .trim()
+      .min(3, translateStatic("Enter valid mobile or email")),
+    password: z.string().min(1, translateStatic("Password is required")),
+    city: z.string().trim().min(1, translateStatic("City is required")),
     omc_id: z.string().trim().optional(),
     locationLat: z.coerce.number().optional(),
     locationLng: z.coerce.number().optional(),
@@ -39,7 +43,7 @@ const registerSchema = z
       return true;
     },
     {
-      message: "OMC ID is required",
+      message: translateStatic("OMC ID is required"),
       path: ["omc_id"],
     },
   );
@@ -48,6 +52,7 @@ type RegisterFormValues = z.input<typeof registerSchema>;
 type RegisterSubmitValues = z.output<typeof registerSchema>;
 
 export function RegisterPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -79,7 +84,7 @@ export function RegisterPage() {
     },
     onError: (error) => {
       setError("root", {
-        message: getApiErrorMessage(error, "Registration failed"),
+        message: getApiErrorMessage(error, t("Registration failed")),
       });
     },
   });
@@ -159,7 +164,7 @@ export function RegisterPage() {
           </svg>
         </div>
         <h1 className="auth-title">SahayLPG</h1>
-        <p className="auth-subtitle">Create an Account</p>
+        <p className="auth-subtitle">{t("Create an Account")}</p>
       </div>
 
       <main
@@ -172,21 +177,21 @@ export function RegisterPage() {
             className={`auth-tab ${role === "BENEFICIARY" ? "active" : ""}`}
             onClick={() => setValue("role", "BENEFICIARY")}
           >
-            Citizen
+            {t("Citizen")}
           </button>
           <button
             type="button"
             className={`auth-tab ${role === "WARDEN" ? "active" : ""}`}
             onClick={() => setValue("role", "WARDEN")}
           >
-            Warden
+            {t("Warden")}
           </button>
           <button
             type="button"
             className={`auth-tab ${role === "TECHNICIAN" ? "active" : ""}`}
             onClick={() => setValue("role", "TECHNICIAN")}
           >
-            Tech
+            {t("Tech")}
           </button>
         </div>
 
@@ -197,7 +202,7 @@ export function RegisterPage() {
 
           <div className="auth-form-group">
             <div className="auth-label-row">
-              <label className="auth-label">FULL NAME</label>
+              <label className="auth-label">{t("FULL NAME")}</label>
             </div>
             <div className="auth-input-wrap">
               <User size={18} className="auth-input-icon" />
@@ -205,7 +210,7 @@ export function RegisterPage() {
                 type="text"
                 {...register("name")}
                 className="auth-input"
-                placeholder="Enter name as on Aadhar Card"
+                placeholder={t("Enter name as on Aadhar Card")}
               />
             </div>
             {errors.name && (
@@ -215,7 +220,7 @@ export function RegisterPage() {
 
           <div className="auth-form-group">
             <div className="auth-label-row">
-              <label className="auth-label">IDENTITY</label>
+              <label className="auth-label">{t("IDENTITY")}</label>
             </div>
             <div className="auth-input-wrap">
               <User size={18} className="auth-input-icon" />
@@ -223,7 +228,7 @@ export function RegisterPage() {
                 type="text"
                 {...register("identity")}
                 className="auth-input"
-                placeholder="Mobile number or email"
+                placeholder={t("Mobile number or email")}
               />
             </div>
             {errors.identity && (
@@ -233,7 +238,7 @@ export function RegisterPage() {
 
           <div className="auth-form-group">
             <div className="auth-label-row">
-              <label className="auth-label">SECURITY KEY</label>
+              <label className="auth-label">{t("SECURITY KEY")}</label>
             </div>
             <div className="auth-input-wrap">
               <Lock size={18} className="auth-input-icon" />
@@ -241,7 +246,7 @@ export function RegisterPage() {
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
                 className="auth-input"
-                placeholder="Create password"
+                placeholder={t("Create password")}
               />
               <button
                 type="button"
@@ -259,12 +264,12 @@ export function RegisterPage() {
 
           <div className="auth-form-group">
             <div className="auth-label-row">
-              <label className="auth-label">CITY</label>
+              <label className="auth-label">{t("CITY")}</label>
             </div>
             <div className="auth-input-wrap">
               <MapPin size={18} className="auth-input-icon" />
               <select {...register("city")} className="auth-input">
-                <option value="">Select your city</option>
+                <option value="">{t("Select your city")}</option>
                 {SUPPORTED_CITIES.map((city) => (
                   <option key={city} value={city}>
                     {city}
@@ -280,7 +285,7 @@ export function RegisterPage() {
           {role === "BENEFICIARY" && (
             <div className="auth-form-group">
               <div className="auth-label-row">
-                <label className="auth-label">OMC ID</label>
+                <label className="auth-label">{t("OMC ID")}</label>
               </div>
               <div className="auth-input-wrap">
                 <Building size={18} className="auth-input-icon" />
@@ -288,7 +293,7 @@ export function RegisterPage() {
                   type="text"
                   {...register("omc_id")}
                   className="auth-input"
-                  placeholder="OMC-1234"
+                  placeholder={t("OMC-1234")}
                 />
               </div>
               {errors.omc_id && (
@@ -303,17 +308,17 @@ export function RegisterPage() {
             disabled={registerMutation.isPending}
           >
             {registerMutation.isPending
-              ? "Registering..."
-              : "Complete Registration"}
+              ? t("Registering...")
+              : t("Complete Registration")}
           </button>
         </form>
 
         <div className="auth-divider"></div>
 
         <p className="auth-signup-text">
-          Already registered?{" "}
+          {t("Already registered?")}{" "}
           <Link to="/login" className="auth-signup-link">
-            Secure Sign In
+            {t("Secure Sign In")}
           </Link>
         </p>
       </main>
@@ -324,8 +329,8 @@ export function RegisterPage() {
             <ShieldCheck size={20} />
           </div>
           <div className="auth-badge-content">
-            <span className="auth-badge-title">VERIFIED</span>
-            <span className="auth-badge-text">Govt Secure</span>
+            <span className="auth-badge-title">{t("VERIFIED")}</span>
+            <span className="auth-badge-text">{t("Govt Secure")}</span>
           </div>
         </div>
         <div className="auth-badge auth-badge-gray">
@@ -333,8 +338,8 @@ export function RegisterPage() {
             <Shield size={20} />
           </div>
           <div className="auth-badge-content">
-            <span className="auth-badge-title">PRIVACY</span>
-            <span className="auth-badge-text">End-to-End</span>
+            <span className="auth-badge-title">{t("PRIVACY")}</span>
+            <span className="auth-badge-text">{t("End-to-End")}</span>
           </div>
         </div>
       </div>
@@ -343,13 +348,13 @@ export function RegisterPage() {
         <p className="auth-footer-title">SahayLPG Ecosystem © 2024</p>
         <div className="auth-footer-links">
           <Link to="#" className="auth-footer-link">
-            Privacy Policy
+            {t("Privacy Policy")}
           </Link>
           <Link to="#" className="auth-footer-link">
-            Emergency Terms
+            {t("Emergency Terms")}
           </Link>
           <Link to="#" className="auth-footer-link">
-            Support
+            {t("Support")}
           </Link>
         </div>
       </footer>

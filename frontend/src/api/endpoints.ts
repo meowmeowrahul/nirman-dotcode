@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type {
+  AppNotification,
   Contributor,
   KycStatus,
   Transaction,
@@ -82,10 +83,7 @@ export async function lockEscrow(payload: {
     transaction: Transaction;
     reused_existing?: boolean;
     message?: string;
-  }>(
-    "/escrow/lock",
-    payload,
-  );
+  }>("/escrow/lock", payload);
   return response.data;
 }
 
@@ -128,12 +126,10 @@ export async function setContributorListingToggle(payload: {
       toggle_enabled: boolean;
       listed_at: string | null;
       city: string | null;
-      location:
-        | {
-            type: "Point";
-            coordinates: [number, number];
-          }
-        | null;
+      location: {
+        type: "Point";
+        coordinates: [number, number];
+      } | null;
     };
   }>("/contributor/list/toggle", payload);
   return response.data;
@@ -159,12 +155,10 @@ export async function getMyContributorListingStatus() {
       toggle_enabled: boolean;
       listed_at: string | null;
       city: string | null;
-      location:
-        | {
-            type: "Point";
-            coordinates: [number, number];
-          }
-        | null;
+      location: {
+        type: "Point";
+        coordinates: [number, number];
+      } | null;
     };
   }>("/contributor/list/me");
   return response.data;
@@ -357,6 +351,24 @@ export async function getContributorNotifications() {
     pending_ack_count: number;
     open_request_count: number;
   }>("/transactions/contributor-notifications");
+  return response.data;
+}
+
+export async function getMyNotifications(limit = 50) {
+  const response = await api.get<{
+    notifications: AppNotification[];
+    unread_count: number;
+  }>("/notifications", {
+    params: { limit },
+  });
+  return response.data;
+}
+
+export async function markAllNotificationsRead() {
+  const response = await api.patch<{
+    success: boolean;
+    marked_count: number;
+  }>("/notifications/read-all");
   return response.data;
 }
 
