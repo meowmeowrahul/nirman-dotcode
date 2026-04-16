@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  ClipboardCheck,
+  ArrowRightLeft,
+} from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useTransactionStore } from "../../store/transactionStore";
 import { PageHeader } from "../../components/PageHeader";
@@ -422,27 +427,23 @@ export function DashboardPage() {
           </div>
         </header>
 
-        {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
-          <section className="card" style={{ padding: "0.9rem 1rem" }}>
-            {effectiveKycStatus === "VERIFIED" && (
-              <p style={{ margin: 0, color: "#166534", fontWeight: 600 }}>
-                {t("KYC approved by warden. You now have full access.")}
-              </p>
-            )}
-            {effectiveKycStatus === "REJECTED" && (
-              <p style={{ margin: 0, color: "#b91c1c", fontWeight: 600 }}>
-                {t(
-                  "KYC rejected by warden. Update your documents and resubmit.",
-                )}
-              </p>
-            )}
-            {effectiveKycStatus === "PENDING" && (
-              <p style={{ margin: 0, color: "#92400e", fontWeight: 600 }}>
-                {t("KYC submitted and awaiting warden review.")}
-              </p>
-            )}
-          </section>
-        )}
+        {(role === "BENEFICIARY" || role === "CONTRIBUTOR") &&
+          effectiveKycStatus !== "VERIFIED" && (
+            <section className="card" style={{ padding: "0.9rem 1rem" }}>
+              {effectiveKycStatus === "REJECTED" && (
+                <p style={{ margin: 0, color: "#b91c1c", fontWeight: 600 }}>
+                  {t(
+                    "KYC rejected by warden. Update your documents and resubmit.",
+                  )}
+                </p>
+              )}
+              {effectiveKycStatus === "PENDING" && (
+                <p style={{ margin: 0, color: "#92400e", fontWeight: 600 }}>
+                  {t("KYC submitted and awaiting warden review.")}
+                </p>
+              )}
+            </section>
+          )}
 
         <section
           className="dashboard-actions"
@@ -934,27 +935,51 @@ export function DashboardPage() {
         </section>
 
         {(role === "BENEFICIARY" || role === "CONTRIBUTOR") && (
-          <section className="card stack" style={{ padding: "0", overflow: "hidden" }}>
-            <div 
-              style={{ padding: "1rem", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+          <section
+            className="card stack"
+            style={{ padding: "0", overflow: "hidden" }}
+          >
+            <div
+              style={{
+                padding: "1rem",
+                cursor: "pointer",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+              }}
               onClick={() => setIsComplaintBoxOpen(!isComplaintBoxOpen)}
             >
               <div>
                 <h3 style={{ margin: 0 }}>{t("Complaint Box")}</h3>
                 <p className="muted-text" style={{ margin: "0.25rem 0 0 0" }}>
-                  {t("Report misconduct or safety issues directly to the warden queue.")}
+                  {t(
+                    "Report misconduct or safety issues directly to the warden queue.",
+                  )}
                 </p>
               </div>
-              <button 
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: "0.25rem" }}
+              <button
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#64748b",
+                  padding: "0.25rem",
+                }}
                 aria-label={isComplaintBoxOpen ? t("Close") : t("Open")}
               >
-                {isComplaintBoxOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                {isComplaintBoxOpen ? (
+                  <ChevronUp size={24} />
+                ) : (
+                  <ChevronDown size={24} />
+                )}
               </button>
             </div>
-            
+
             {isComplaintBoxOpen && (
-              <div style={{ padding: "0 1rem 1rem 1rem", marginTop: "-0.5rem" }} className="stack">
+              <div
+                style={{ padding: "0 1rem 1rem 1rem", marginTop: "-0.5rem" }}
+                className="stack"
+              >
                 <div className="stack" style={{ gap: "0.65rem" }}>
                   <label className="field">
                     <span>{t("Accused User ID")}</span>
@@ -984,7 +1009,9 @@ export function DashboardPage() {
                       <option value="OVERPRICING">
                         {tCategory("OVERPRICING")}
                       </option>
-                      <option value="MISCONDUCT">{tCategory("MISCONDUCT")}</option>
+                      <option value="MISCONDUCT">
+                        {tCategory("MISCONDUCT")}
+                      </option>
                       <option value="SAFETY">{tCategory("SAFETY")}</option>
                       <option value="FRAUD">{tCategory("FRAUD")}</option>
                       <option value="OTHER">{tCategory("OTHER")}</option>
@@ -1024,7 +1051,11 @@ export function DashboardPage() {
                 </button>
 
                 <div
-                  style={{ borderTop: "1px solid #e2e8f0", paddingTop: "0.75rem", marginTop: "1rem" }}
+                  style={{
+                    borderTop: "1px solid #e2e8f0",
+                    paddingTop: "0.75rem",
+                    marginTop: "1rem",
+                  }}
                 >
                   <h4 style={{ margin: "0 0 0.5rem 0" }}>
                     {t("My Complaint History")}
@@ -1038,7 +1069,10 @@ export function DashboardPage() {
                     (myComplaintData?.complaints?.length ? (
                       myComplaintData.complaints.slice(0, 5).map((item) => (
                         <div key={item.id} style={{ marginBottom: "0.55rem" }}>
-                          <p className="mono" style={{ margin: "0 0 0.2rem 0" }}>
+                          <p
+                            className="mono"
+                            style={{ margin: "0 0 0.2rem 0" }}
+                          >
                             #{item.id.slice(-6)} • {tCategory(item.category)} •{" "}
                             {tStatus(item.status)}
                           </p>
@@ -1076,45 +1110,100 @@ export function DashboardPage() {
           return (
             <div
               style={{
-                backgroundColor: "#FFF3E0",
-                padding: "1.5rem",
+                backgroundColor: "white",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+                padding: "2rem",
                 borderRadius: "1rem",
               }}
             >
-              <h3 style={{ color: "#E65100", marginTop: 0 }}>
-                {t("KYC Verification Review")}
-              </h3>
-              <p
-                style={{
-                  color: "#666",
-                  marginBottom: "1rem",
-                  fontSize: "0.9rem",
-                }}
-              >
-                {t(
-                  "Search a user by ID to review submitted KYC documents and update verification status.",
-                )}
-              </p>
+              <div style={{ marginBottom: "1.5rem" }}>
+                <h3
+                  style={{
+                    color: "#1e293b",
+                    margin: "0 0 0.5rem 0",
+                    fontSize: "1.5rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#F97316"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                  {t("KYC Verification Review")}
+                </h3>
+                <p style={{ color: "#64748b", margin: 0, fontSize: "0.95rem" }}>
+                  {t(
+                    "Search a user by ID to review submitted KYC documents and update verification status.",
+                  )}
+                </p>
+              </div>
 
               <div
                 style={{
                   display: "flex",
-                  gap: "0.75rem",
+                  gap: "1rem",
                   alignItems: "center",
-                  marginBottom: "1rem",
+                  marginBottom: "2rem",
                 }}
               >
-                <input
-                  value={kycLookupInput}
-                  onChange={(event) => setKycLookupInput(event.target.value)}
-                  placeholder={t("Enter user ID")}
-                  style={{
-                    flex: 1,
-                    padding: "0.7rem 0.9rem",
-                    borderRadius: "0.6rem",
-                    border: "1px solid #f59e0b",
-                  }}
-                />
+                <div
+                  style={{ position: "relative", flex: 1, maxWidth: "500px" }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "1rem",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8" />
+                      <path d="m21 21-4.3-4.3" />
+                    </svg>
+                  </div>
+                  <input
+                    value={kycLookupInput}
+                    onChange={(event) => setKycLookupInput(event.target.value)}
+                    placeholder={t("Enter User ID...")}
+                    style={{
+                      width: "100%",
+                      padding: "0.8rem 1rem 0.8rem 2.8rem",
+                      borderRadius: "0.5rem",
+                      border: "1px solid #cbd5e1",
+                      backgroundColor: "#f8fafc",
+                      fontSize: "1rem",
+                      transition: "border-color 0.2s",
+                      outline: "none",
+                    }}
+                    onFocus={(e) => (e.target.style.borderColor = "#F97316")}
+                    onBlur={(e) => (e.target.style.borderColor = "#cbd5e1")}
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -1123,49 +1212,143 @@ export function DashboardPage() {
                     setKycLookupTarget(trimmed || null);
                   }}
                   style={{
-                    backgroundColor: "#F57C00",
+                    backgroundColor: "#F97316",
                     color: "white",
                     border: "none",
-                    padding: "0.7rem 1.2rem",
-                    borderRadius: "0.6rem",
+                    padding: "0.8rem 1.5rem",
+                    borderRadius: "0.5rem",
                     cursor: "pointer",
-                    fontWeight: "bold",
+                    fontWeight: "600",
+                    fontSize: "0.95rem",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    boxShadow: "0 2px 4px rgba(249, 115, 22, 0.2)",
+                    transition: "all 0.2s",
                   }}
+                  onMouseOver={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#ea580c")
+                  }
+                  onMouseOut={(e) =>
+                    (e.currentTarget.style.backgroundColor = "#F97316")
+                  }
                 >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" x2="12" y1="15" y2="3" />
+                  </svg>
                   {t("Load Application")}
                 </button>
               </div>
 
               <div
                 style={{
-                  margin: "0 0 1rem 0",
-                  backgroundColor: "#fff7ed",
-                  border: "1px solid #fdba74",
-                  borderRadius: "0.6rem",
-                  padding: "0.7rem 0.9rem",
+                  margin: "0 0 2rem 0",
+                  backgroundColor: "#fff8f2",
+                  border: "1px dashed #fdba74",
+                  borderRadius: "0.75rem",
+                  padding: "1.25rem",
                 }}
               >
-                <p
+                <div
                   style={{
-                    margin: "0 0 0.5rem 0",
-                    color: "#7c2d12",
-                    fontSize: "0.86rem",
-                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "1rem",
                   }}
                 >
-                  {t("Pending KYC Queue")}
-                </p>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#ea580c"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#c2410c",
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {t("Pending KYC Queue")}
+                  </p>
+                </div>
+
                 {pendingKycLoading && (
                   <p
-                    style={{ margin: 0, color: "#9a3412", fontSize: "0.85rem" }}
+                    style={{
+                      margin: 0,
+                      color: "#9a3412",
+                      fontSize: "0.9rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
                   >
+                    <svg
+                      className="animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
                     {t("Loading pending applications...")}
                   </p>
                 )}
                 {!pendingKycLoading && pendingKycError && (
                   <p
-                    style={{ margin: 0, color: "#C62828", fontSize: "0.85rem" }}
+                    style={{
+                      margin: 0,
+                      color: "#dc2626",
+                      fontSize: "0.9rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
                   >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
                     {getApiErrorMessage(
                       pendingKycError,
                       t("Unable to load pending KYC queue"),
@@ -1175,8 +1358,15 @@ export function DashboardPage() {
                 {!pendingKycLoading &&
                   !pendingKycError &&
                   (pendingKycData?.items?.length ? (
-                    <div style={{ display: "grid", gap: "0.45rem" }}>
-                      {pendingKycData.items.slice(0, 3).map((item) => (
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "0.75rem",
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(280px, 1fr))",
+                      }}
+                    >
+                      {pendingKycData.items.map((item) => (
                         <button
                           key={item.user_id}
                           type="button"
@@ -1187,24 +1377,69 @@ export function DashboardPage() {
                           }}
                           style={{
                             display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            border: "1px solid #fdba74",
-                            borderRadius: "0.45rem",
-                            padding: "0.5rem 0.6rem",
-                            backgroundColor: "#fff",
+                            flexDirection: "column",
+                            border: "1px solid #fed7aa",
+                            borderRadius: "0.5rem",
+                            padding: "1rem",
+                            backgroundColor: "white",
                             cursor: "pointer",
                             textAlign: "left",
+                            transition: "all 0.2s ease",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.borderColor = "#f97316";
+                            e.currentTarget.style.transform =
+                              "translateY(-1px)";
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.borderColor = "#fed7aa";
+                            e.currentTarget.style.transform = "none";
                           }}
                         >
                           <span
-                            style={{ color: "#7c2d12", fontSize: "0.84rem" }}
+                            style={{
+                              color: "#1e293b",
+                              fontSize: "1rem",
+                              fontWeight: 600,
+                              marginBottom: "0.25rem",
+                            }}
                           >
-                            {item.name} • {item.user_id}
+                            {item.name}
                           </span>
                           <span
-                            style={{ color: "#9a3412", fontSize: "0.8rem" }}
+                            style={{
+                              color: "#64748b",
+                              fontSize: "0.85rem",
+                              marginBottom: "0.5rem",
+                              fontFamily: "monospace",
+                            }}
                           >
+                            {item.user_id}
+                          </span>
+                          <span
+                            style={{
+                              color: "#ea580c",
+                              fontSize: "0.8rem",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.25rem",
+                            }}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
                             {formatDistanceToNow(new Date(item.submitted_at), {
                               addSuffix: true,
                             })}
@@ -1217,7 +1452,7 @@ export function DashboardPage() {
                       style={{
                         margin: 0,
                         color: "#9a3412",
-                        fontSize: "0.85rem",
+                        fontSize: "0.95rem",
                       }}
                     >
                       {t("No pending KYC applications for this region.")}
@@ -1226,106 +1461,228 @@ export function DashboardPage() {
               </div>
 
               {wardenKycLoading && (
-                <p style={{ margin: 0, color: "#666" }}>
-                  {t("Loading KYC form...")}
-                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    padding: "2rem 0",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#64748b",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      fontSize: "1rem",
+                    }}
+                  >
+                    <svg
+                      className="animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#F97316"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                    {t("Loading KYC form...")}
+                  </p>
+                </div>
               )}
 
               {!wardenKycLoading && wardenKycError && (
-                <p style={{ margin: 0, color: "#C62828" }}>
-                  {getApiErrorMessage(
-                    wardenKycError,
-                    t("Unable to load KYC form"),
-                  )}
-                </p>
+                <div
+                  style={{
+                    backgroundColor: "#fef2f2",
+                    borderLeft: "4px solid #dc2626",
+                    padding: "1rem",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#b91c1c",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    {getApiErrorMessage(
+                      wardenKycError,
+                      t("Unable to load KYC form"),
+                    )}
+                  </p>
+                </div>
               )}
 
               {!wardenKycLoading &&
                 !wardenKycError &&
                 wardenKycForm?.kyc_form && (
                   <div
+                    className="kyc-review-panel"
                     style={{
-                      display: "grid",
-                      gap: "1rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "1.5rem",
+                      backgroundColor: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      padding: "1.5rem",
+                      borderRadius: "0.75rem",
                     }}
                   >
+                    {/* Header with Applicant Details & Actions */}
                     <div
                       style={{
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "flex-start",
-                        backgroundColor: "white",
-                        padding: "1.2rem",
-                        borderRadius: "0.5rem",
-                        borderLeft: "4px solid #F57C00",
-                        boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+                        flexWrap: "wrap",
+                        gap: "1rem",
+                        paddingBottom: "1.5rem",
+                        borderBottom: "1px solid #e2e8f0",
                       }}
                     >
-                      <div>
-                        <h4
+                      <div style={{ display: "flex", gap: "1rem" }}>
+                        <div
                           style={{
-                            margin: "0 0 0.25rem 0",
-                            color: "#333",
-                            fontSize: "1.1rem",
+                            width: "48px",
+                            height: "48px",
+                            borderRadius: "50%",
+                            backgroundColor: "#e0f2fe",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
-                          {wardenKycForm.kyc_form.user?.name ||
-                            t("Citizen Applicant")}
-                        </h4>
-                        <p
-                          style={{
-                            margin: 0,
-                            color: "#777",
-                            fontSize: "0.9rem",
-                          }}
-                        >
-                          {t("User ID")}:{" "}
-                          {wardenKycForm.kyc_form.user?.id || "N/A"}
-                        </p>
-                        <p
-                          style={{
-                            margin: "0.25rem 0 0 0",
-                            color: "#777",
-                            fontSize: "0.9rem",
-                          }}
-                        >
-                          {t("Submitted")}:{" "}
-                          {formatDistanceToNow(
-                            new Date(wardenKycForm.kyc_form.submitted_at),
-                            { addSuffix: true },
-                          )}
-                        </p>
-                        <div style={{ marginTop: "0.6rem" }}>
-                          <StatusChip
-                            label={tStatus(
-                              wardenKycForm.kyc_form.user?.kyc_status ||
-                                "PENDING",
-                            )}
-                            tone={
-                              wardenKycForm.kyc_form.user?.kyc_status ===
-                              "VERIFIED"
-                                ? "success"
-                                : wardenKycForm.kyc_form.user?.kyc_status ===
-                                    "REJECTED"
-                                  ? "error"
-                                  : "warning"
-                            }
-                          />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#0284c7"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h4
+                            style={{
+                              margin: "0 0 0.25rem 0",
+                              color: "#0f172a",
+                              fontSize: "1.2rem",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {wardenKycForm.kyc_form.user?.name ||
+                              t("Citizen Applicant")}
+                          </h4>
+                          <p
+                            style={{
+                              margin: "0 0 0.25rem 0",
+                              color: "#475569",
+                              fontSize: "0.9rem",
+                              fontFamily: "monospace",
+                            }}
+                          >
+                            ID: {wardenKycForm.kyc_form.user?.id || "N/A"}
+                          </p>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "1rem",
+                              marginTop: "0.5rem",
+                            }}
+                          >
+                            <StatusChip
+                              label={tStatus(
+                                wardenKycForm.kyc_form.user?.kyc_status ||
+                                  "PENDING",
+                              )}
+                              tone={
+                                wardenKycForm.kyc_form.user?.kyc_status ===
+                                "VERIFIED"
+                                  ? "success"
+                                  : wardenKycForm.kyc_form.user?.kyc_status ===
+                                      "REJECTED"
+                                    ? "error"
+                                    : "warning"
+                              }
+                            />
+                            <span
+                              style={{
+                                color: "#64748b",
+                                fontSize: "0.85rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.25rem",
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                              {formatDistanceToNow(
+                                new Date(wardenKycForm.kyc_form.submitted_at),
+                                { addSuffix: true },
+                              )}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
                       <div
                         style={{
                           display: "flex",
-                          gap: "0.5rem",
+                          gap: "0.75rem",
                           flexWrap: "wrap",
                         }}
                       >
                         <button
                           type="button"
+                          className="kyc-action-btn verify-btn"
                           disabled={
                             updateKycMutation.isPending ||
-                            !wardenKycForm.kyc_form.user?.id
+                            !wardenKycForm.kyc_form.user?.id ||
+                            wardenKycForm.kyc_form.user?.kyc_status ===
+                              "VERIFIED"
                           }
                           onClick={() =>
                             wardenKycForm.kyc_form.user?.id &&
@@ -1335,22 +1692,56 @@ export function DashboardPage() {
                             })
                           }
                           style={{
-                            backgroundColor: "#2E7D32",
-                            color: "white",
+                            backgroundColor:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "VERIFIED"
+                                ? "#f1f5f9"
+                                : "#16a34a",
+                            color:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "VERIFIED"
+                                ? "#94a3b8"
+                                : "white",
                             border: "none",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "2rem",
-                            cursor: "pointer",
-                            fontWeight: "bold",
+                            padding: "0.6rem 1.25rem",
+                            borderRadius: "0.375rem",
+                            cursor:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "VERIFIED"
+                                ? "not-allowed"
+                                : "pointer",
+                            fontWeight: "600",
+                            fontSize: "0.9rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            transition: "background-color 0.2s",
                           }}
                         >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                          </svg>
                           {t("Verify")}
                         </button>
                         <button
                           type="button"
+                          className="kyc-action-btn reject-btn"
                           disabled={
                             updateKycMutation.isPending ||
-                            !wardenKycForm.kyc_form.user?.id
+                            !wardenKycForm.kyc_form.user?.id ||
+                            wardenKycForm.kyc_form.user?.kyc_status ===
+                              "REJECTED"
                           }
                           onClick={() =>
                             wardenKycForm.kyc_form.user?.id &&
@@ -1360,22 +1751,56 @@ export function DashboardPage() {
                             })
                           }
                           style={{
-                            backgroundColor: "#D32F2F",
-                            color: "white",
+                            backgroundColor:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "REJECTED"
+                                ? "#f1f5f9"
+                                : "#dc2626",
+                            color:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "REJECTED"
+                                ? "#94a3b8"
+                                : "white",
                             border: "none",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "2rem",
-                            cursor: "pointer",
-                            fontWeight: "bold",
+                            padding: "0.6rem 1.25rem",
+                            borderRadius: "0.375rem",
+                            cursor:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "REJECTED"
+                                ? "not-allowed"
+                                : "pointer",
+                            fontWeight: "600",
+                            fontSize: "0.9rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            transition: "background-color 0.2s",
                           }}
                         >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="15" y1="9" x2="9" y2="15" />
+                            <line x1="9" y1="9" x2="15" y2="15" />
+                          </svg>
                           {t("Reject")}
                         </button>
                         <button
                           type="button"
                           disabled={
                             updateKycMutation.isPending ||
-                            !wardenKycForm.kyc_form.user?.id
+                            !wardenKycForm.kyc_form.user?.id ||
+                            wardenKycForm.kyc_form.user?.kyc_status ===
+                              "PENDING"
                           }
                           onClick={() =>
                             wardenKycForm.kyc_form.user?.id &&
@@ -1385,57 +1810,284 @@ export function DashboardPage() {
                             })
                           }
                           style={{
-                            backgroundColor: "#f59e0b",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "2rem",
-                            cursor: "pointer",
-                            fontWeight: "bold",
+                            backgroundColor: "white",
+                            color:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "PENDING"
+                                ? "#94a3b8"
+                                : "#64748b",
+                            border: "1px solid",
+                            borderColor:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "PENDING"
+                                ? "#e2e8f0"
+                                : "#cbd5e1",
+                            padding: "0.6rem 1.25rem",
+                            borderRadius: "0.375rem",
+                            cursor:
+                              wardenKycForm.kyc_form.user?.kyc_status ===
+                              "PENDING"
+                                ? "not-allowed"
+                                : "pointer",
+                            fontWeight: "600",
+                            fontSize: "0.9rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
                           }}
                         >
-                          {t("Mark Pending")}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                          {t("Reset to Pending")}
                         </button>
                       </div>
                     </div>
 
                     {kycActionError && (
-                      <p style={{ margin: 0, color: "#C62828" }}>
+                      <div
+                        style={{
+                          backgroundColor: "#fef2f2",
+                          color: "#b91c1c",
+                          padding: "0.75rem 1rem",
+                          borderRadius: "0.375rem",
+                          border: "1px solid #fecaca",
+                          fontSize: "0.9rem",
+                        }}
+                      >
                         {kycActionError}
-                      </p>
+                      </div>
                     )}
 
+                    {/* Document Grid */}
                     <div
                       style={{
                         display: "grid",
-                        gap: "0.6rem",
+                        gap: "1.25rem",
                         gridTemplateColumns:
-                          "repeat(auto-fit, minmax(220px, 1fr))",
+                          "repeat(auto-fit, minmax(280px, 1fr))",
                       }}
                     >
                       <a
                         href={wardenKycForm.kyc_form.aadhar_doc_photo.url}
                         target="_blank"
                         rel="noreferrer"
-                        style={{ color: "#1565C0" }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.75rem",
+                          backgroundColor: "white",
+                          padding: "1.5rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.75rem",
+                          color: "#1e293b",
+                          textDecoration: "none",
+                          transition: "all 0.2s",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.borderColor = "#3b82f6";
+                          e.currentTarget.style.boxShadow =
+                            "0 4px 6px -1px rgba(0,0,0,0.1)";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.boxShadow =
+                            "0 1px 3px rgba(0,0,0,0.05)";
+                        }}
                       >
-                        {t("View Aadhaar Document")}
+                        <div
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            backgroundColor: "#eff6ff",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                          </svg>
+                        </div>
+                        <span style={{ fontWeight: 600 }}>
+                          {t("Aadhaar Document")}
+                        </span>
+                        <span style={{ color: "#3b82f6", fontSize: "0.85rem" }}>
+                          {t("Click to view full size")}
+                        </span>
                       </a>
+
                       <a
                         href={wardenKycForm.kyc_form.pan_doc_photo.url}
                         target="_blank"
                         rel="noreferrer"
-                        style={{ color: "#1565C0" }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.75rem",
+                          backgroundColor: "white",
+                          padding: "1.5rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.75rem",
+                          color: "#1e293b",
+                          textDecoration: "none",
+                          transition: "all 0.2s",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.borderColor = "#3b82f6";
+                          e.currentTarget.style.boxShadow =
+                            "0 4px 6px -1px rgba(0,0,0,0.1)";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.boxShadow =
+                            "0 1px 3px rgba(0,0,0,0.05)";
+                        }}
                       >
-                        {t("View PAN Document")}
+                        <div
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            backgroundColor: "#eff6ff",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <rect
+                              x="3"
+                              y="4"
+                              width="18"
+                              height="18"
+                              rx="2"
+                              ry="2"
+                            />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                            <path d="M8 14h.01" />
+                            <path d="M12 14h.01" />
+                            <path d="M16 14h.01" />
+                            <path d="M8 18h.01" />
+                            <path d="M12 18h.01" />
+                            <path d="M16 18h.01" />
+                          </svg>
+                        </div>
+                        <span style={{ fontWeight: 600 }}>
+                          {t("PAN Document")}
+                        </span>
+                        <span style={{ color: "#3b82f6", fontSize: "0.85rem" }}>
+                          {t("Click to view full size")}
+                        </span>
                       </a>
+
                       <a
                         href={wardenKycForm.kyc_form.verification_selfie.url}
                         target="_blank"
                         rel="noreferrer"
-                        style={{ color: "#1565C0" }}
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.75rem",
+                          backgroundColor: "white",
+                          padding: "1.5rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.75rem",
+                          color: "#1e293b",
+                          textDecoration: "none",
+                          transition: "all 0.2s",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.borderColor = "#3b82f6";
+                          e.currentTarget.style.boxShadow =
+                            "0 4px 6px -1px rgba(0,0,0,0.1)";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.boxShadow =
+                            "0 1px 3px rgba(0,0,0,0.05)";
+                        }}
                       >
-                        {t("View Verification Selfie")}
+                        <div
+                          style={{
+                            width: "48px",
+                            height: "48px",
+                            backgroundColor: "#eff6ff",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+                            <circle cx="12" cy="13" r="3" />
+                          </svg>
+                        </div>
+                        <span style={{ fontWeight: 600 }}>
+                          {t("Verification Selfie")}
+                        </span>
+                        <span style={{ color: "#3b82f6", fontSize: "0.85rem" }}>
+                          {t("Click to view full size")}
+                        </span>
                       </a>
                     </div>
                   </div>
@@ -1917,6 +2569,220 @@ export function DashboardPage() {
   }
 
   // Fallback for TECHNICIAN
+  if (role === "TECHNICIAN") {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "1.5rem",
+          paddingBottom: "2rem",
+        }}
+      >
+        <section className="card">
+          <PageHeader
+            title={`${t("Welcome")}, ${welcomeName}!`}
+            subtitle={t("Your Technician Dashboard")}
+          />
+          <div className="info-grid" style={{ marginTop: "1rem" }}>
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "var(--bg-subtle)",
+                borderRadius: "0.5rem",
+              }}
+            >
+              <p className="muted-text" style={{ marginBottom: "0.5rem" }}>
+                {t("Role")}
+              </p>
+              <p
+                className="mono"
+                style={{
+                  color: "var(--brand-700)",
+                  fontWeight: "600",
+                  fontSize: "1.1rem",
+                }}
+              >
+                {tRole(role)}
+              </p>
+            </div>
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "var(--bg-subtle)",
+                borderRadius: "0.5rem",
+              }}
+            >
+              <p className="muted-text" style={{ marginBottom: "0.5rem" }}>
+                {t("User ID")}
+              </p>
+              <p className="mono" style={{ fontSize: "1.1rem" }}>
+                {userId}
+              </p>
+            </div>
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "var(--bg-subtle)",
+                borderRadius: "0.5rem",
+              }}
+            >
+              <p className="muted-text" style={{ marginBottom: "0.5rem" }}>
+                {t("Region ID")}
+              </p>
+              <p
+                className="mono"
+                style={{ fontWeight: "600", fontSize: "1.1rem" }}
+              >
+                {city || regionId || "N/A"}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <h3
+          style={{
+            fontSize: "1.25rem",
+            color: "var(--text-primary)",
+            fontWeight: "600",
+            marginTop: "0.5rem",
+          }}
+        >
+          {t("Quick Actions")}
+        </h3>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "1.5rem",
+          }}
+        >
+          <button
+            onClick={() => navigate("/technician/verify")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1.25rem",
+              padding: "2.5rem 1.5rem",
+              backgroundColor: "white",
+              border: "1px solid var(--border-default)",
+              borderRadius: "1rem",
+              cursor: "pointer",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+            }}
+          >
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "var(--brand-100)",
+                borderRadius: "50%",
+                color: "var(--brand-600)",
+              }}
+            >
+              <ClipboardCheck size={40} />
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontWeight: "600",
+                  fontSize: "1.2rem",
+                  marginBottom: "0.5rem",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {t("Verify Cylinder")}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.95rem",
+                  color: "var(--text-secondary)",
+                  lineHeight: "1.4",
+                }}
+              >
+                {t(
+                  "Verify cylinder evidence and safety for assigned deliveries",
+                )}
+              </span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => navigate("/technician/handover")}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1.25rem",
+              padding: "2.5rem 1.5rem",
+              backgroundColor: "white",
+              border: "1px solid var(--border-default)",
+              borderRadius: "1rem",
+              cursor: "pointer",
+              transition: "transform 0.2s ease, box-shadow 0.2s ease",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow = "0 8px 16px rgba(0,0,0,0.1)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+            }}
+          >
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "var(--brand-100)",
+                borderRadius: "50%",
+                color: "var(--brand-600)",
+              }}
+            >
+              <ArrowRightLeft size={40} />
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <span
+                style={{
+                  display: "block",
+                  fontWeight: "600",
+                  fontSize: "1.2rem",
+                  marginBottom: "0.5rem",
+                  color: "var(--text-primary)",
+                }}
+              >
+                {t("Process Handover")}
+              </span>
+              <span
+                style={{
+                  fontSize: "0.95rem",
+                  color: "var(--text-secondary)",
+                  lineHeight: "1.4",
+                }}
+              >
+                {t("Transfer custody of cylinders and update system status")}
+              </span>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // General fallback
   return (
     <section className="card">
       <PageHeader

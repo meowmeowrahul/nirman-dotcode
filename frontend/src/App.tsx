@@ -10,6 +10,8 @@ import { NotFoundPage } from "./pages/common/NotFoundPage";
 import { ProfilePage } from "./pages/common/ProfilePage";
 import { NotificationsPage } from "./pages/common/NotificationsPage";
 import { KycCompletionPage } from "./pages/common/KycCompletionPage";
+import { PrivacyPolicyPage } from "./pages/common/PrivacyPolicyPage";
+import { EmergencyTermsPage } from "./pages/common/EmergencyTermsPage";
 import { EscrowClosurePage } from "./pages/escrow/EscrowClosurePage";
 import { TechHandoverPage } from "./pages/technician/TechHandoverPage";
 import { TechVerifyPage } from "./pages/technician/TechVerifyPage";
@@ -22,7 +24,11 @@ function LandingRedirect() {
   const kycStatus = useAuthStore((state) => state.kycStatus);
   const isCitizenRole = role === "BENEFICIARY" || role === "CONTRIBUTOR";
   const target =
-    token && isCitizenRole && kycStatus !== "VERIFIED" ? "/profile" : token ? "/dashboard" : "/login";
+    token && isCitizenRole && kycStatus !== "VERIFIED"
+      ? "/profile"
+      : token
+        ? "/dashboard"
+        : "/login";
   return <Navigate to={target} replace />;
 }
 
@@ -32,6 +38,8 @@ function App() {
       <Route path="/" element={<LandingRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+      <Route path="/emergency-terms" element={<EmergencyTermsPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

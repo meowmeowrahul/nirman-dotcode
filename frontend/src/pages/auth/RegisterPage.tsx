@@ -327,15 +327,20 @@ export function RegisterPage() {
       <footer className="auth-footer">
         <p className="auth-footer-title">SahayLPG Ecosystem © 2024</p>
         <div className="auth-footer-links">
-          <Link to="#" className="auth-footer-link">
+          <Link to="/privacy-policy" className="auth-footer-link">
             {t("Privacy Policy")}
           </Link>
-          <Link to="#" className="auth-footer-link">
+          <Link to="/emergency-terms" className="auth-footer-link">
             {t("Emergency Terms")}
           </Link>
-          <Link to="#" className="auth-footer-link">
-            {t("Support")}
-          </Link>
+          <a
+            href="https://github.com/meowmeowrahul/nirman-dotcode"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="auth-footer-link"
+          >
+            {t("Github")}
+          </a>
         </div>
       </footer>
     </div>

@@ -9,7 +9,7 @@ export function RoleHomeRedirect() {
   }
 
   if (role === "TECHNICIAN") {
-    return <Navigate to="/technician/verify" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   if (role === "WARDEN") {

@@ -1,7 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import { useAuthStore } from "../store/authStore";
-import { useTransactionStore } from "../store/transactionStore";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Role } from "../types/domain";
@@ -19,20 +18,17 @@ interface NavItem {
 const navByRole: Record<Role, NavItem[]> = {
   BENEFICIARY: [],
   CONTRIBUTOR: [],
-  TECHNICIAN: [
-    { to: "/technician/verify", label: "Verify Cylinder" },
-    { to: "/technician/handover", label: "Handover" },
-  ],
-  WARDEN: [{ to: "/warden/kyc", label: "KYC Governance" }],
+  TECHNICIAN: [],
+  WARDEN: [],
 };
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const { language, setLanguage, t, tStatus } = useI18n();
+  const { language, setLanguage, t } = useI18n();
   const role = useAuthStore((state) => state.role);
   const city = useAuthStore((state) => state.city);
   const logout = useAuthStore((state) => state.logout);
-  const userStatus = useTransactionStore((state) => state.userStatus);
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -171,7 +167,14 @@ export function AppLayout() {
             position: "relative",
           }}
         >
-          <div ref={langDropdownRef} style={{ position: "relative" }}>
+          <div
+            ref={langDropdownRef}
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <button
               className="icon-action-btn"
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
@@ -182,6 +185,7 @@ export function AppLayout() {
                 color: "#6B7280",
                 display: "flex",
                 alignItems: "center",
+                padding: 0,
               }}
             >
               <Globe size={24} />
@@ -248,6 +252,9 @@ export function AppLayout() {
               cursor: "pointer",
               color: "#6B7280",
               position: "relative",
+              display: "flex",
+              alignItems: "center",
+              padding: 0,
             }}
             aria-label={t("Open notifications")}
           >
@@ -268,7 +275,14 @@ export function AppLayout() {
             )}
           </button>
 
-          <div ref={dropdownRef} style={{ position: "relative" }}>
+          <div
+            ref={dropdownRef}
+            style={{
+              position: "relative",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <button
               className="profile-trigger"
               onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -277,6 +291,8 @@ export function AppLayout() {
                 border: "none",
                 cursor: "pointer",
                 padding: 0,
+                display: "flex",
+                alignItems: "center",
               }}
             >
               <img

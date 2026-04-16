@@ -1,9 +1,10 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getMyProfile } from "../../api/endpoints";
 import { useI18n } from "../../i18n/language";
+import "../auth/auth.css";
 
 export function ProfilePage() {
   const { t, tRole, tStatus } = useI18n();
@@ -47,6 +48,9 @@ export function ProfilePage() {
         padding: "32px 20px",
         maxWidth: "820px",
         margin: "0 auto",
+        minHeight: "calc(100vh - 120px)",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <div style={{ marginBottom: "18px" }}>
@@ -268,6 +272,26 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+
+      <footer className="auth-footer" style={{ marginTop: "auto" }}>
+        <p className="auth-footer-title">SahayLPG Ecosystem © 2024</p>
+        <div className="auth-footer-links">
+          <Link to="/privacy-policy" className="auth-footer-link">
+            {t("Privacy Policy")}
+          </Link>
+          <Link to="/emergency-terms" className="auth-footer-link">
+            {t("Emergency Terms")}
+          </Link>
+          <a
+            href="https://github.com/meowmeowrahul/nirman-dotcode"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="auth-footer-link"
+          >
+            {t("Github")}
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
