@@ -111,6 +111,7 @@ export function AppLayout() {
             SahayLPG
           </Link>
           <div
+            className="city-pill"
             style={{
               display: "flex",
               alignItems: "center",
@@ -154,6 +155,7 @@ export function AppLayout() {
           }}
         >
           <div
+            className="status-pill"
             style={{
               backgroundColor: "#1E3A8A",
               color: "#FFFFFF",
@@ -170,6 +172,7 @@ export function AppLayout() {
 
           <div ref={langDropdownRef} style={{ position: "relative" }}>
             <button
+              className="icon-action-btn"
               onClick={() => setLangDropdownOpen(!langDropdownOpen)}
               style={{
                 background: "none",
@@ -184,6 +187,7 @@ export function AppLayout() {
             </button>
             {langDropdownOpen && (
               <div
+                className="floating-menu"
                 style={{
                   position: "absolute",
                   top: "100%",
@@ -201,6 +205,7 @@ export function AppLayout() {
               >
                 {languageOptions.map((lang) => (
                   <button
+                    className="floating-menu-item"
                     key={lang.code}
                     onClick={() => {
                       setLanguage(lang.code);
@@ -234,6 +239,7 @@ export function AppLayout() {
           </div>
 
           <button
+            className="icon-action-btn notification-btn"
             onClick={() => navigate("/notifications")}
             style={{
               background: "none",
@@ -247,6 +253,7 @@ export function AppLayout() {
             <Bell size={24} />
             {unreadCount > 0 && (
               <span
+                className="notif-dot"
                 style={{
                   position: "absolute",
                   top: 0,
@@ -262,6 +269,7 @@ export function AppLayout() {
 
           <div ref={dropdownRef} style={{ position: "relative" }}>
             <button
+              className="profile-trigger"
               onClick={() => setDropdownOpen(!dropdownOpen)}
               style={{
                 background: "none",
@@ -271,6 +279,7 @@ export function AppLayout() {
               }}
             >
               <img
+                className="profile-avatar"
                 src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
                 alt="Profile"
                 style={{
@@ -285,6 +294,7 @@ export function AppLayout() {
 
             {dropdownOpen && (
               <div
+                className="floating-menu user-menu"
                 style={{
                   position: "absolute",
                   top: "100%",
@@ -301,6 +311,7 @@ export function AppLayout() {
                 }}
               >
                 <button
+                  className="floating-menu-item"
                   onClick={() => {
                     setDropdownOpen(false);
                     navigate("/profile");
@@ -329,6 +340,7 @@ export function AppLayout() {
                   <User size={16} /> {t("Profile")}
                 </button>
                 <button
+                  className="floating-menu-item logout-item"
                   onClick={() => {
                     setDropdownOpen(false);
                     logout();

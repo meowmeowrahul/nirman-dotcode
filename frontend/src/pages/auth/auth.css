@@ -7,6 +7,7 @@
   padding: 20px;
   background: linear-gradient(135deg, #f0f4f8 0%, #fffdfa 40%, #ffedd5 100%);
   font-family: "Inter", sans-serif;
+  animation: auth-fade-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-header {
@@ -15,6 +16,7 @@
   align-items: center;
   margin-bottom: 24px;
   margin-top: auto;
+  animation: auth-rise-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-logo-box {
@@ -27,6 +29,14 @@
   justify-content: center;
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-logo-box:hover {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 12px 20px -14px rgba(234, 88, 12, 0.65);
 }
 
 .auth-logo-icon {
@@ -55,6 +65,17 @@
     0 0 20px rgba(255, 255, 255, 0.5) inset;
   border: 1px solid rgba(255, 255, 255, 0.6);
   backdrop-filter: blur(10px);
+  animation: auth-rise-in 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-card-modern:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 24px 40px -18px rgba(15, 23, 42, 0.22),
+    0 0 20px rgba(255, 255, 255, 0.5) inset;
 }
 
 .auth-tabs {
@@ -74,15 +95,23 @@
   font-weight: 600;
   color: #64748b;
   cursor: pointer;
-  transition: all 0.2s;
+  transition:
+    all 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
   border: none;
   background: transparent;
+}
+
+.auth-tab:hover {
+  transform: translateY(-1px);
+  color: #475569;
 }
 
 .auth-tab.active {
   background: white;
   color: #ea580c;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  animation: auth-tab-pop 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-form-group {
@@ -124,15 +153,24 @@
   border-radius: 12px;
   padding: 0 16px;
   border: 1px solid transparent;
+  overflow: hidden;
   transition:
-    border-color 0.2s,
-    background-color 0.2s;
+    border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-input-wrap:hover {
+  border-color: rgba(234, 88, 12, 0.28);
+  transform: translateY(-1px);
 }
 
 .auth-input-wrap:focus-within {
   background: white;
   border-color: #ea580c;
   box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+  transform: translateY(-1px);
 }
 
 .auth-input-icon {
@@ -142,12 +180,30 @@
 
 .auth-input {
   flex: 1;
+  width: auto;
+  min-width: 0;
   border: none;
   background: transparent;
   padding: 14px 0;
   font-size: 15px;
   color: #1e293b;
   outline: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.auth-input:hover,
+.auth-input:focus,
+.auth-input:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  transform: none;
+}
+
+select.auth-input {
+  appearance: none;
 }
 
 .auth-input::placeholder {
@@ -162,11 +218,16 @@
   padding: 4px;
   margin-left: 8px;
   border-radius: 4px;
+  transition:
+    color 120ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 120ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .auth-input-action:hover {
   color: #475569;
   background: #f1f5f9;
+  transform: scale(1.06);
 }
 
 .auth-submit-btn {
@@ -179,17 +240,23 @@
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition:
+    background 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
   margin-top: 8px;
 }
 
 .auth-submit-btn:hover {
   background: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -16px rgba(234, 88, 12, 0.85);
 }
 
 .auth-submit-btn:active {
   background: #c2410c;
+  transform: translateY(1px) scale(0.99);
 }
 
 .auth-submit-btn:disabled {
@@ -213,6 +280,7 @@
   color: #ea580c;
   font-weight: 600;
   text-decoration: none;
+  transition: color 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .auth-signup-link:hover {
@@ -224,6 +292,7 @@
   gap: 16px;
   margin-top: 32px;
   width: min(440px, 100%);
+  animation: auth-rise-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .auth-badge {
@@ -233,6 +302,14 @@
   padding: 12px 16px;
   border-radius: 16px;
   gap: 12px;
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.auth-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -18px rgba(15, 23, 42, 0.55);
 }
 
 .auth-badge-green {
@@ -306,10 +383,14 @@
   font-weight: 500;
   color: #94a3b8;
   text-decoration: none;
+  transition:
+    color 120ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .auth-footer-link:hover {
   color: #64748b;
+  transform: translateY(-1px);
 }
 
 .auth-error {
@@ -317,6 +398,7 @@
   font-size: 12px;
   margin-top: 6px;
   display: block;
+  animation: auth-error-appear 180ms ease-out both;
 }
 
 .auth-error-banner {
@@ -327,4 +409,56 @@
   font-size: 13px;
   margin-bottom: 16px;
   text-align: center;
+  animation: auth-error-appear 180ms ease-out both;
+}
+
+@keyframes auth-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes auth-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-tab-pop {
+  from {
+    transform: scale(0.98);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes auth-error-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell,
+  .auth-header,
+  .auth-card-modern,
+  .auth-badges,
+  .auth-error,
+  .auth-error-banner {
+    animation: none !important;
+  }
 }
