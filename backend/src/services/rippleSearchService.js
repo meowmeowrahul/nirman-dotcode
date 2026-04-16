@@ -10,6 +10,7 @@ function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
   const query = {
     role: { $in: LENDING_ROLES },
     "contributor_listing.status": "LISTED",
+    "contributor_listing.toggle_enabled": true,
   };
 
   if (requesterUserId && mongoose.Types.ObjectId.isValid(requesterUserId)) {
@@ -113,6 +114,7 @@ async function runListedFallback({ city, requesterUserId }) {
   const baseFilter = {
     role: { $in: LENDING_ROLES },
     "contributor_listing.status": "LISTED",
+    "contributor_listing.toggle_enabled": true,
   };
 
   if (requesterUserId && mongoose.Types.ObjectId.isValid(requesterUserId)) {

@@ -103,8 +103,39 @@ export async function activateContributorListing(payload: {
   region_id?: string;
 }) {
   const response = await api.post<{
-    listing: { user_id: string; status: "LISTED" | "UNLISTED"; listed_at: string };
+    listing: {
+      user_id: string;
+      status: "LISTED" | "UNLISTED";
+      toggle_enabled: boolean;
+      listed_at: string;
+    };
   }>("/contributor/list", payload);
+  return response.data;
+}
+
+export async function setContributorListingToggle(payload: {
+  enabled: boolean;
+  lat?: number;
+  lng?: number;
+  city?: string;
+  region_id?: string;
+}) {
+  const response = await api.patch<{
+    listing: {
+      user_id: string;
+      role: User["role"];
+      status: "LISTED" | "UNLISTED";
+      toggle_enabled: boolean;
+      listed_at: string | null;
+      city: string | null;
+      location:
+        | {
+            type: "Point";
+            coordinates: [number, number];
+          }
+        | null;
+    };
+  }>("/contributor/list/toggle", payload);
   return response.data;
 }
 
@@ -125,6 +156,7 @@ export async function getMyContributorListingStatus() {
       user_id: string;
       role: User["role"];
       status: "LISTED" | "UNLISTED";
+      toggle_enabled: boolean;
       listed_at: string | null;
       city: string | null;
       location:
@@ -317,6 +349,7 @@ export async function getContributorNotifications() {
       type: "LOCK_ACK_REQUIRED" | "OPEN_REQUEST_BROADCAST";
       transaction_id: string;
       status: string;
+      beneficiary_user_id?: string | null;
       city: string | null;
       created_at: string;
       message: string;

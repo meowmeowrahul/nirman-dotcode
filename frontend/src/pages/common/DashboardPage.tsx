@@ -15,6 +15,7 @@ import {
   acceptOpenContributorRequest,
   createComplaint,
   getContributorNotifications,
+  setContributorListingToggle,
   getMyContributorListingStatus,
   getMyComplaints,
   getMyProfile,
@@ -25,7 +26,6 @@ import {
   getTechnicianAvailability,
   getUserTransactions,
   getWardenKycForm,
-  activateContributorListing,
   updateMyLocation,
   updateComplaintStatus,
   updateKycStatus,
@@ -73,7 +73,6 @@ export function DashboardPage() {
   const username = useAuthStore((state) => state.username);
   const kycStatus = useAuthStore((state) => state.kycStatus);
   const setKycStatus = useAuthStore((state) => state.setKycStatus);
-  const userStatus = useTransactionStore((state) => state.userStatus);
   const setUserStatus = useTransactionStore((state) => state.setUserStatus);
   const activeTransaction = useTransactionStore((state) => state.activeTransaction);
   const setActiveTransaction = useTransactionStore((state) => state.setActiveTransaction);
@@ -114,7 +113,7 @@ export function DashboardPage() {
   const { data: contributorListingData } = useQuery({
     queryKey: ["myContributorListing", userId],
     queryFn: getMyContributorListingStatus,
-    enabled: role === "CONTRIBUTOR",
+    enabled: role === "CONTRIBUTOR" || role === "BENEFICIARY",
     refetchInterval: 4000,
     retry: false,
   });
@@ -265,15 +264,15 @@ export function DashboardPage() {
     mutationFn: updateMyLocation,
   });
 
-  const activateListingMutation = useMutation({
-    mutationFn: activateContributorListing,
+  const listingToggleMutation = useMutation({
+    mutationFn: setContributorListingToggle,
     onSuccess: () => {
       setListingError(null);
-      setUserStatus("ACTIVE_CONTRIBUTOR");
+      queryClient.invalidateQueries({ queryKey: ["myContributorListing", userId] });
     },
     onError: (error) => {
       setListingError(
-        getApiErrorMessage(error, "Unable to activate contributor listing")
+        getApiErrorMessage(error, "Unable to update Lend LPG toggle")
       );
       setUserStatus("IDLE");
     },
@@ -297,29 +296,41 @@ export function DashboardPage() {
   }, [txData, userId, setActiveTransaction]);
 
   useEffect(() => {
-    if (role !== "CONTRIBUTOR") {
+    if (role !== "CONTRIBUTOR" && role !== "BENEFICIARY") {
       return;
     }
 
+    const toggleEnabled = Boolean(contributorListingData?.listing?.toggle_enabled);
     const listingStatus = contributorListingData?.listing?.status;
-    if (listingStatus === "LISTED") {
+    if (toggleEnabled && listingStatus === "LISTED" && !activeTransaction) {
       setUserStatus("ACTIVE_CONTRIBUTOR");
       return;
     }
 
-    if (listingStatus === "UNLISTED" && !activeTransaction) {
+    if (!activeTransaction) {
       setUserStatus("IDLE");
     }
   }, [role, contributorListingData, activeTransaction, setUserStatus]);
 
   const isContributorListed = contributorListingData?.listing?.status === "LISTED";
+  const isLendToggleEnabled = Boolean(contributorListingData?.listing?.toggle_enabled);
 
-  const handleLendLpgClick = async () => {
-    setUserStatus("ACTIVE_CONTRIBUTOR");
+  const handleLendLpgToggle = async (enabled: boolean) => {
+    if (listingToggleMutation.isPending) {
+      return;
+    }
+
     setListingError(null);
     setListingNotice(null);
 
     try {
+      if (!enabled) {
+        await listingToggleMutation.mutateAsync({ enabled: false });
+        setUserStatus("IDLE");
+        return;
+      }
+
+      setUserStatus("ACTIVE_CONTRIBUTOR");
       let coords: { lat: number; lng: number } | null = null;
 
       try {
@@ -334,7 +345,8 @@ export function DashboardPage() {
         await updateLocationMutation.mutateAsync(coords);
       }
 
-      await activateListingMutation.mutateAsync({
+      await listingToggleMutation.mutateAsync({
+        enabled: true,
         lat: coords?.lat,
         lng: coords?.lng,
         city: city || regionId || undefined,
@@ -432,33 +444,50 @@ export function DashboardPage() {
               style={{
                 maxWidth: "250px",
                 opacity: 0.9,
-                marginBottom: "2rem",
+                marginBottom: "1rem",
                 lineHeight: "1.4",
               }}
             >
               Have an extra cylinder? Support a neighbor in need and earn
               community trust credits.
             </p>
-            {!isContributorListed ? (
-              <button
-                onClick={handleLendLpgClick}
-                style={{
-                  backgroundColor: "white",
-                  color: "#059669",
-                  padding: "0.75rem 1.5rem",
-                  borderRadius: 4,
-                  fontWeight: "bold",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
+
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                marginBottom: "1rem",
+                fontWeight: 700,
+                cursor: listingToggleMutation.isPending ? "not-allowed" : "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isLendToggleEnabled}
+                onChange={(event) => {
+                  handleLendLpgToggle(event.target.checked);
                 }}
-              >
-                Start Lending <span aria-hidden="true">&rarr;</span>
-              </button>
-            ) : (
-              <ActiveListing isLoading={activateListingMutation.isPending} />
+                disabled={listingToggleMutation.isPending}
+                style={{
+                  width: 18,
+                  height: 18,
+                  accentColor: "#0f172a",
+                }}
+              />
+              <span>
+                Lend LPG Toggle: {isLendToggleEnabled ? "ON" : "OFF"}
+              </span>
+            </label>
+
+            {isLendToggleEnabled && (
+              <ActiveListing isLoading={listingToggleMutation.isPending} />
+            )}
+
+            {isLendToggleEnabled && !isContributorListed && (
+              <p style={{ marginTop: "0.75rem", color: "#D1FAE5", fontWeight: 600 }}>
+                Toggle is ON. You may be temporarily unavailable while another active transaction is in progress.
+              </p>
             )}
             {listingError && (
               <p

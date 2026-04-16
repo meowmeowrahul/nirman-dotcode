@@ -24,7 +24,7 @@ describe("Ripple Integration - Urgency Bypass", () => {
       phone: "+910000000010",
       password: "hashed-password-placeholder",
       kyc: { status: "VERIFIED", omc_id: "SV900010" },
-      contributor_listing: { status: "LISTED" },
+      contributor_listing: { status: "LISTED", toggle_enabled: true },
       location: { type: "Point", coordinates: [0, 0.0134747] },
     });
 

@@ -32,7 +32,7 @@ describe("Ripple Integration - Busy Contributor Exclusion", () => {
       phone: "+910000000501",
       password: "hashed-password-placeholder",
       kyc: { status: "VERIFIED", omc_id: "SV500002" },
-      contributor_listing: { status: "LISTED" },
+      contributor_listing: { status: "LISTED", toggle_enabled: true },
       location: { type: "Point", coordinates: [73.1623, 18.9319] },
     });
 

@@ -80,6 +80,10 @@ const userSchema = new Schema(
         enum: ["LISTED", "UNLISTED"],
         default: "UNLISTED",
       },
+      toggle_enabled: {
+        type: Boolean,
+        default: false,
+      },
       listed_at: {
         type: Date,
         default: null,

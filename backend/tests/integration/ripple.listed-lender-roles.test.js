@@ -23,7 +23,7 @@ describe("Ripple Integration - Listed Lender Roles", () => {
       phone: "+910000000099",
       password: "hashed-password-placeholder",
       kyc: { status: "VERIFIED", omc_id: "SV900099" },
-      contributor_listing: { status: "LISTED" },
+      contributor_listing: { status: "LISTED", toggle_enabled: true },
       city: "Mumbai",
       region_id: "Mumbai",
       location: { type: "Point", coordinates: [72.8777, 19.076] },
