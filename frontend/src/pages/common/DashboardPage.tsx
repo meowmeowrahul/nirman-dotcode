@@ -15,6 +15,7 @@ import {
   acceptOpenContributorRequest,
   createComplaint,
   getContributorNotifications,
+  getMyContributorListingStatus,
   getMyComplaints,
   getMyProfile,
   getComplaints,
@@ -108,6 +109,14 @@ export function DashboardPage() {
     queryFn: getContributorNotifications,
     enabled: role === "CONTRIBUTOR",
     refetchInterval: 4000,
+  });
+
+  const { data: contributorListingData } = useQuery({
+    queryKey: ["myContributorListing", userId],
+    queryFn: getMyContributorListingStatus,
+    enabled: role === "CONTRIBUTOR",
+    refetchInterval: 4000,
+    retry: false,
   });
 
   const {
@@ -287,6 +296,24 @@ export function DashboardPage() {
     }
   }, [txData, userId, setActiveTransaction]);
 
+  useEffect(() => {
+    if (role !== "CONTRIBUTOR") {
+      return;
+    }
+
+    const listingStatus = contributorListingData?.listing?.status;
+    if (listingStatus === "LISTED") {
+      setUserStatus("ACTIVE_CONTRIBUTOR");
+      return;
+    }
+
+    if (listingStatus === "UNLISTED" && !activeTransaction) {
+      setUserStatus("IDLE");
+    }
+  }, [role, contributorListingData, activeTransaction, setUserStatus]);
+
+  const isContributorListed = contributorListingData?.listing?.status === "LISTED";
+
   const handleLendLpgClick = async () => {
     setUserStatus("ACTIVE_CONTRIBUTOR");
     setListingError(null);
@@ -412,7 +439,7 @@ export function DashboardPage() {
               Have an extra cylinder? Support a neighbor in need and earn
               community trust credits.
             </p>
-            {userStatus !== "ACTIVE_CONTRIBUTOR" ? (
+            {!isContributorListed ? (
               <button
                 onClick={handleLendLpgClick}
                 style={{

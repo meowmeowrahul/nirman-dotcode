@@ -119,6 +119,25 @@ export async function calculateEscrow(payload: {
   return response.data;
 }
 
+export async function getMyContributorListingStatus() {
+  const response = await api.get<{
+    listing: {
+      user_id: string;
+      role: User["role"];
+      status: "LISTED" | "UNLISTED";
+      listed_at: string | null;
+      city: string | null;
+      location:
+        | {
+            type: "Point";
+            coordinates: [number, number];
+          }
+        | null;
+    };
+  }>("/contributor/list/me");
+  return response.data;
+}
+
 export async function releaseEscrow(payload: {
   transaction_id: string;
   serial_number?: string;

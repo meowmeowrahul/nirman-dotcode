@@ -3,6 +3,7 @@ const Transaction = require("../models/Transaction");
 const User = require("../models/User");
 
 const ACTIVE_REQUEST_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
+const LENDING_ROLES = ["CONTRIBUTOR", "BENEFICIARY"];
 
 function getLatLngFromLocation(location) {
   if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
@@ -77,7 +78,7 @@ async function liveMap(req, res, next) {
     }
 
     const contributorFilter = {
-      role: "CONTRIBUTOR",
+      role: { $in: LENDING_ROLES },
       "contributor_listing.status": "LISTED",
     };
     if (city) {

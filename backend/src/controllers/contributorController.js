@@ -63,6 +63,37 @@ async function listContributor(req, res, next) {
   }
 }
 
+async function getMyListingStatus(req, res, next) {
+  try {
+    const userId = req.user && req.user.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const user = await User.findById(userId)
+      .select("role contributor_listing city region_id location")
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    return res.status(200).json({
+      listing: {
+        user_id: String(user._id),
+        role: user.role,
+        status: user.contributor_listing?.status || "UNLISTED",
+        listed_at: user.contributor_listing?.listed_at || null,
+        city: user.city || user.region_id || null,
+        location: user.location || null,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   listContributor,
+  getMyListingStatus,
 };

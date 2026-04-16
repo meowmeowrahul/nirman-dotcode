@@ -4,10 +4,11 @@ const Transaction = require("../models/Transaction");
 
 const MAX_RESULTS = 10;
 const ACTIVE_LENDING_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
+const LENDING_ROLES = ["CONTRIBUTOR", "BENEFICIARY"];
 
 function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
   const query = {
-    role: "CONTRIBUTOR",
+    role: { $in: LENDING_ROLES },
     "contributor_listing.status": "LISTED",
   };
 
@@ -110,7 +111,7 @@ function mapListedContributor(user) {
 
 async function runListedFallback({ city, requesterUserId }) {
   const baseFilter = {
-    role: "CONTRIBUTOR",
+    role: { $in: LENDING_ROLES },
     "contributor_listing.status": "LISTED",
   };
 
