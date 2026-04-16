@@ -1,7 +1,9 @@
 const User = require("../models/User");
 const mongoose = require("mongoose");
+const Transaction = require("../models/Transaction");
 
 const MAX_RESULTS = 10;
+const ACTIVE_LENDING_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
 
 function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
   const query = {
@@ -52,7 +54,39 @@ function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
 
 async function runPhase({ lat, lng, maxDistanceMeters, requesterUserId }) {
   const pipeline = buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId });
-  const rows = await User.aggregate(pipeline);
+  const rows = await User.aggregate([
+    ...pipeline,
+    {
+      $lookup: {
+        from: "transactions",
+        let: { contributorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$contributor_id", "$$contributorId"] },
+                  { $in: ["$status", ACTIVE_LENDING_STATUSES] },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: "active_contributor_transactions",
+      },
+    },
+    {
+      $match: {
+        active_contributor_transactions: { $size: 0 },
+      },
+    },
+    {
+      $project: {
+        active_contributor_transactions: 0,
+      },
+    },
+  ]);
   return rows.map((row) => ({
     ...row,
     distance_km:
@@ -60,80 +94,6 @@ async function runPhase({ lat, lng, maxDistanceMeters, requesterUserId }) {
         ? Number((row.distance_meters / 1000).toFixed(3))
         : undefined,
   }));
-}
-
-function buildRelaxedPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
-  const query = {
-    role: "CONTRIBUTOR",
-  };
-
-  if (requesterUserId && mongoose.Types.ObjectId.isValid(requesterUserId)) {
-    query._id = { $ne: new mongoose.Types.ObjectId(requesterUserId) };
-  }
-
-  return [
-    {
-      $geoNear: {
-        near: {
-          type: "Point",
-          coordinates: [lng, lat],
-        },
-        distanceField: "distance_meters",
-        spherical: true,
-        maxDistance: maxDistanceMeters,
-        query,
-      },
-    },
-    {
-      $sort: {
-        distance_meters: 1,
-      },
-    },
-    {
-      $limit: MAX_RESULTS,
-    },
-    {
-      $project: {
-        _id: 1,
-        role: 1,
-        email: 1,
-        phone: 1,
-        city: 1,
-        region_id: 1,
-        location: 1,
-        "kyc.status": 1,
-        distance_meters: 1,
-      },
-    },
-  ];
-}
-
-function hasValidCoordinates(location) {
-  if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
-    return false;
-  }
-
-  const [lng, lat] = location.coordinates;
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-    return false;
-  }
-
-  return !(lat === 0 && lng === 0);
-}
-
-async function runRelaxedPhase({ lat, lng, maxDistanceMeters, requesterUserId }) {
-  const pipeline = buildRelaxedPipeline({ lat, lng, maxDistanceMeters, requesterUserId });
-  const rows = await User.aggregate(pipeline);
-
-  return rows
-    .filter((row) => hasValidCoordinates(row.location))
-    .map((row) => ({
-      ...row,
-      distance_km:
-        typeof row.distance_meters === "number"
-          ? Number((row.distance_meters / 1000).toFixed(3))
-          : undefined,
-    }));
 }
 
 function mapListedContributor(user) {
@@ -156,6 +116,19 @@ async function runListedFallback({ city, requesterUserId }) {
 
   if (requesterUserId && mongoose.Types.ObjectId.isValid(requesterUserId)) {
     baseFilter._id = { $ne: new mongoose.Types.ObjectId(requesterUserId) };
+  }
+
+  const busyContributorIds = await Transaction.find({
+    contributor_id: { $ne: null },
+    status: { $in: ACTIVE_LENDING_STATUSES },
+  })
+    .distinct("contributor_id");
+
+  if (busyContributorIds.length > 0) {
+    baseFilter._id = {
+      ...(baseFilter._id || {}),
+      $nin: busyContributorIds,
+    };
   }
 
   const regionFilter = city ? { ...baseFilter, $or: [{ city }, { region_id: city }] } : null;
@@ -200,19 +173,6 @@ async function rippleSearch({ lat, lng, urgencyScore, city, requesterUserId }) {
     });
     if (matches.length > 0) {
       return matches;
-    }
-  }
-
-  for (const radius of phases) {
-    const relaxedMatches = await runRelaxedPhase({
-      lat,
-      lng,
-      maxDistanceMeters: radius,
-      requesterUserId,
-    });
-
-    if (relaxedMatches.length > 0) {
-      return relaxedMatches;
     }
   }
 

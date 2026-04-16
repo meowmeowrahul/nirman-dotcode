@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Transaction = require("../models/Transaction");
+const User = require("../models/User");
 
 const ACTIVE_REQUEST_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
 
@@ -186,11 +187,20 @@ async function listContributorNotifications(req, res, next) {
     }
 
     const city = req.user.city || req.user.region_id || null;
+    const contributor = await User.findById(contributorId)
+      .select("contributor_listing.status")
+      .lean();
+    const isListed = contributor && contributor.contributor_listing?.status === "LISTED";
 
     const pendingAckFilter = {
       contributor_id: contributorId,
       status: { $in: ACTIVE_REQUEST_STATUSES },
       "contributor_acknowledgement.status": "PENDING",
+    };
+
+    const activeAssignedFilter = {
+      contributor_id: contributorId,
+      status: { $in: ACTIVE_REQUEST_STATUSES },
     };
 
     const openRequestFilter = {
@@ -201,16 +211,19 @@ async function listContributorNotifications(req, res, next) {
       openRequestFilter.$or = [{ city }, { region_id: city }];
     }
 
-    const [pendingAcks, openRequests] = await Promise.all([
+    const [pendingAcks, activeAssigned, openRequests] = await Promise.all([
       Transaction.find(pendingAckFilter)
         .sort({ updatedAt: -1 })
         .limit(30)
         .lean(),
+      Transaction.findOne(activeAssignedFilter).lean(),
       Transaction.find(openRequestFilter)
         .sort({ createdAt: -1 })
         .limit(30)
         .lean(),
     ]);
+
+    const broadcastRequests = activeAssigned || !isListed ? [] : openRequests;
 
     const notifications = [
       ...pendingAcks.map((tx) => ({
@@ -223,7 +236,7 @@ async function listContributorNotifications(req, res, next) {
           (tx.contributor_acknowledgement && tx.contributor_acknowledgement.message) ||
           "Escrow has been locked for your listing. Acknowledge to proceed.",
       })),
-      ...openRequests.map((tx) => ({
+      ...broadcastRequests.map((tx) => ({
         type: "OPEN_REQUEST_BROADCAST",
         transaction_id: String(tx._id),
         status: tx.status,
@@ -237,7 +250,7 @@ async function listContributorNotifications(req, res, next) {
     return res.status(200).json({
       notifications,
       pending_ack_count: pendingAcks.length,
-      open_request_count: openRequests.length,
+      open_request_count: broadcastRequests.length,
     });
   } catch (error) {
     return next(error);

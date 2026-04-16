@@ -276,9 +276,15 @@ export function DashboardPage() {
     }
 
     const contributorTx = txData.transactions.find(
-      (tx: any) => tx?.contributor?.id === userId
+      (tx: any) =>
+        tx?.contributor?.id === userId &&
+        ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"].includes(tx?.status)
     );
     setActiveTransaction(contributorTx || null);
+
+    if (contributorTx) {
+      setUserStatus("IDLE");
+    }
   }, [txData, userId, setActiveTransaction]);
 
   const handleLendLpgClick = async () => {

@@ -3,7 +3,7 @@ const User = require("../../src/models/User");
 const app = require("../../src/app");
 const { setupTestDb, teardownTestDb, clearDb } = require("../helpers/db");
 
-describe("Ripple Integration - Relaxed Fallback", () => {
+describe("Ripple Integration - Listed Contributors Only", () => {
   beforeAll(async () => {
     await setupTestDb();
     await User.syncIndexes();
@@ -17,7 +17,7 @@ describe("Ripple Integration - Relaxed Fallback", () => {
     await clearDb();
   });
 
-  test("returns nearby contributor even when listing status is not LISTED", async () => {
+  test("does not return nearby contributor when listing status is UNLISTED", async () => {
     await User.create({
       role: "CONTRIBUTOR",
       phone: "+910000000044",
@@ -35,7 +35,6 @@ describe("Ripple Integration - Relaxed Fallback", () => {
 
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body)).toBe(true);
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].phone).toBe("+910000000044");
+    expect(response.body).toHaveLength(0);
   });
 });

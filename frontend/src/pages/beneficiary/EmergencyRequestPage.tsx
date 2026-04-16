@@ -119,6 +119,7 @@ export function EmergencyRequestPage() {
     lockMutation.mutate({
       beneficiary_id: userId,
       contributor_id: selectedContributorId || undefined,
+      city: city || undefined,
     });
   };
 

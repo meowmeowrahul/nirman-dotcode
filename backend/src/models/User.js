@@ -85,6 +85,11 @@ const userSchema = new Schema(
         default: null,
       },
     },
+    last_login_at: {
+      type: Date,
+      default: null,
+      index: true,
+    },
     location: {
       type: {
         type: String,

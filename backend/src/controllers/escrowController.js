@@ -18,6 +18,14 @@ async function listOpenRequests(req, res, next) {
       return res.status(401).json({ error: "invalid token user" });
     }
 
+    const contributor = await User.findById(contributorId)
+      .select("contributor_listing.status")
+      .lean();
+
+    if (!contributor || contributor.contributor_listing?.status !== "LISTED") {
+      return res.status(200).json({ requests: [] });
+    }
+
     const query = {
       status: "PAID_IN_ESCROW",
       contributor_id: null,
@@ -64,6 +72,28 @@ async function acceptOpenRequest(req, res, next) {
       return res.status(400).json({ error: "valid transaction_id is required" });
     }
 
+    const contributor = await User.findById(contributorId)
+      .select("contributor_listing.status")
+      .lean();
+
+    if (!contributor || contributor.contributor_listing?.status !== "LISTED") {
+      return res.status(403).json({
+        error: "contributor must activate Lend LPG before accepting requests",
+      });
+    }
+
+    const contributorActiveTx = await Transaction.findOne({
+      contributor_id: contributorId,
+      status: { $in: ACTIVE_HOLDING_STATUSES },
+    }).select("_id status").lean();
+
+    if (contributorActiveTx) {
+      return res.status(409).json({
+        error: "contributor already has an active lending transaction",
+        active_transaction_id: String(contributorActiveTx._id),
+      });
+    }
+
     const tx = await Transaction.findOneAndUpdate(
       {
         _id: transaction_id,
@@ -88,6 +118,12 @@ async function acceptOpenRequest(req, res, next) {
     if (!tx) {
       return res.status(409).json({ error: "request already accepted or unavailable" });
     }
+
+    await User.findByIdAndUpdate(contributorId, {
+      $set: {
+        "contributor_listing.status": "UNLISTED",
+      },
+    });
 
     return res.status(200).json({ transaction: tx });
   } catch (error) {
@@ -133,18 +169,9 @@ async function lockEscrow(req, res, next) {
       beneficiary.region_id ||
       null;
 
-    const tx = await Transaction.create({
-      beneficiary_id,
-      contributor_id: contributor_id || null,
-      city: normalizedCity,
-      region_id: normalizedCity,
-      status: "PAID_IN_ESCROW",
-      escrow: {
-        gas_value_deposited: 950.0,
-        metal_security_deposit: 2000.0,
-        service_fee: 150.0,
-      },
-      contributor_acknowledgement: contributor_id
+    let assignedContributorId = contributor_id || null;
+    let contributorAcknowledgement =
+      contributor_id
         ? {
             status: "PENDING",
             message:
@@ -157,10 +184,54 @@ async function lockEscrow(req, res, next) {
             message: null,
             sent_at: null,
             acknowledged_at: null,
-          },
+          };
+
+    let assignmentWarning = null;
+    if (contributor_id) {
+      const contributorActiveTx = await Transaction.findOne({
+        contributor_id,
+        status: { $in: ACTIVE_HOLDING_STATUSES },
+      }).select("_id status").lean();
+
+      if (contributorActiveTx) {
+        assignedContributorId = null;
+        contributorAcknowledgement = {
+          status: null,
+          message: null,
+          sent_at: null,
+          acknowledged_at: null,
+        };
+        assignmentWarning =
+          "selected contributor is already engaged; request broadcast as open city notification";
+      }
+    }
+
+    const tx = await Transaction.create({
+      beneficiary_id,
+      contributor_id: assignedContributorId,
+      city: normalizedCity,
+      region_id: normalizedCity,
+      status: "PAID_IN_ESCROW",
+      escrow: {
+        gas_value_deposited: 950.0,
+        metal_security_deposit: 2000.0,
+        service_fee: 150.0,
+      },
+      contributor_acknowledgement: contributorAcknowledgement,
     });
 
-    return res.status(201).json({ transaction: tx });
+    if (assignedContributorId) {
+      await User.findByIdAndUpdate(assignedContributorId, {
+        $set: {
+          "contributor_listing.status": "UNLISTED",
+        },
+      });
+    }
+
+    return res.status(201).json({
+      transaction: tx,
+      assignment_warning: assignmentWarning,
+    });
   } catch (error) {
     return next(error);
   }
