@@ -83,7 +83,10 @@ async function createNotificationsByUserFilter({
   });
 }
 
-async function notifyCitizensLpgNeeded({ city = null, transactionId = null } = {}) {
+async function notifyCitizensLpgNeeded({
+  city = null,
+  transactionId = null,
+} = {}) {
   return createNotificationsByUserFilter({
     userFilter: {
       role: { $in: ["BENEFICIARY", "CONTRIBUTOR"] },

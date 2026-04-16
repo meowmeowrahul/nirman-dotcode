@@ -7,7 +7,11 @@ const ACTIVE_REQUEST_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
 const LENDING_ROLES = ["CONTRIBUTOR", "BENEFICIARY"];
 
 function getLatLngFromLocation(location) {
-  if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+  if (
+    !location ||
+    !Array.isArray(location.coordinates) ||
+    location.coordinates.length !== 2
+  ) {
     return null;
   }
 
@@ -42,16 +46,17 @@ async function ripple(req, res, next) {
           ? String(req.user.userId)
           : null;
 
-    const requesterUserId = req.user && req.user.role === "BENEFICIARY"
-      ? rawRequesterUserId
-      : null;
+    const requesterUserId =
+      req.user && req.user.role === "BENEFICIARY" ? rawRequesterUserId : null;
 
     if (lat === null || lng === null) {
       return res.status(400).json({ error: "lat and lng must be numbers" });
     }
 
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return res.status(400).json({ error: "invalid latitude or longitude range" });
+      return res
+        .status(400)
+        .json({ error: "invalid latitude or longitude range" });
     }
 
     const contributors = await rippleSearch({
@@ -66,8 +71,7 @@ async function ripple(req, res, next) {
       await notifyCitizensLpgNeeded({
         city: city || null,
       });
-    } catch (_notificationError) {
-    }
+    } catch (_notificationError) {}
 
     return res.status(200).json(contributors);
   } catch (error) {
@@ -77,7 +81,12 @@ async function ripple(req, res, next) {
 
 async function liveMap(req, res, next) {
   try {
-    const city = req.query.city || req.query.region_id || req.user.city || req.user.region_id || null;
+    const city =
+      req.query.city ||
+      req.query.region_id ||
+      req.user.city ||
+      req.user.region_id ||
+      null;
 
     const transactionFilter = {
       status: { $in: ACTIVE_REQUEST_STATUSES },
@@ -110,7 +119,9 @@ async function liveMap(req, res, next) {
 
     const active_requests = activeTransactions
       .map((tx) => {
-        const position = getLatLngFromLocation(tx.beneficiary_id && tx.beneficiary_id.location);
+        const position = getLatLngFromLocation(
+          tx.beneficiary_id && tx.beneficiary_id.location,
+        );
         if (!position) {
           return null;
         }
