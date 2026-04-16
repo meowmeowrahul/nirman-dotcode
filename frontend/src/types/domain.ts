@@ -41,6 +41,7 @@ export interface Transaction {
   region_id?: string | null;
   status:
     | "PAID_IN_ESCROW"
+    | "PENDING_WARDEN_REVIEW"
     | "VERIFIED"
     | "IN_TRANSIT"
     | "COMPLETED"

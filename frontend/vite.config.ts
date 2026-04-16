@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
         },
+        "/socket.io": {
+          target: backendTarget,
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
   };

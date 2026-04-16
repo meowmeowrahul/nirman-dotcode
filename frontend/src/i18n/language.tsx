@@ -701,6 +701,10 @@ const statusLabels: Record<string, Record<"hi" | "mr", string>> = {
   COMPLETED: { hi: "पूर्ण", mr: "पूर्ण" },
   IN_TRANSIT: { hi: "परिवहन में", mr: "मार्गावर" },
   PAID_IN_ESCROW: { hi: "एस्क्रो में भुगतान", mr: "एस्क्रोमध्ये पेमेंट" },
+  PENDING_WARDEN_REVIEW: {
+    hi: "वार्डन समीक्षा लंबित",
+    mr: "वार्डन पडताळणी प्रलंबित",
+  },
   CANCELLED: { hi: "रद्द", mr: "रद्द" },
   IDLE: { hi: "निष्क्रिय", mr: "निष्क्रिय" },
   ACTIVE_CONTRIBUTOR: { hi: "सक्रिय योगदानकर्ता", mr: "सक्रिय योगदानकर्ता" },

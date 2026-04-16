@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import {
   ChevronDown,
   ChevronUp,
@@ -71,6 +72,58 @@ function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   });
 }
 
+interface WardenAlertEvent {
+  alert_id: string;
+  transaction_id: string | null;
+  combined_risk_score: number;
+  flags: string[];
+  review_status: string;
+  review_reason: string | null;
+  source: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+function normalizeSocketTarget(rawValue?: string): string | undefined {
+  if (!rawValue) {
+    return undefined;
+  }
+
+  const trimmedValue = rawValue.trim();
+  if (!trimmedValue || /[<>]/.test(trimmedValue)) {
+    return undefined;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedValue);
+    const sanitizedPath = parsedUrl.pathname.replace(/\/api\/?$/, "");
+    parsedUrl.pathname = sanitizedPath || "/";
+    parsedUrl.search = "";
+    parsedUrl.hash = "";
+    return parsedUrl.toString().replace(/\/$/, "");
+  } catch (_error) {
+    return undefined;
+  }
+}
+
+function resolveSocketBaseUrl(): string | undefined {
+  const backendTarget = import.meta.env.VITE_BACKEND_TARGET as
+    | string
+    | undefined;
+  const normalizedBackendTarget = normalizeSocketTarget(backendTarget);
+  if (normalizedBackendTarget) {
+    return normalizedBackendTarget;
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  const normalizedApiBaseUrl = normalizeSocketTarget(apiBaseUrl);
+  if (normalizedApiBaseUrl) {
+    return normalizedApiBaseUrl;
+  }
+
+  return undefined;
+}
+
 export function DashboardPage() {
   const { t, tRole, tStatus, tCategory } = useI18n();
   const queryClient = useQueryClient();
@@ -106,6 +159,50 @@ export function DashboardPage() {
     string | null
   >(null);
   const [isComplaintBoxOpen, setIsComplaintBoxOpen] = useState(false);
+  const [wardenAlerts, setWardenAlerts] = useState<WardenAlertEvent[]>([]);
+  const [showMockAlerts, setShowMockAlerts] = useState(false);
+  const [alertsConnectionState, setAlertsConnectionState] = useState<
+    "CONNECTING" | "CONNECTED" | "DISCONNECTED"
+  >("DISCONNECTED");
+
+  const dummyWardenAlerts: WardenAlertEvent[] = [
+    {
+      alert_id: "mock-warden-alert-001",
+      transaction_id: "680101010101010101010101",
+      combined_risk_score: 88,
+      flags: ["MANUAL_WARDEN_REVIEW_REQUIRED", "GEMINI_TIMEOUT"],
+      review_status: "OPEN",
+      review_reason: "Gemini: AI call timed out",
+      source: "GEMINI_TIMEOUT_FALLBACK",
+      created_at: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
+      updated_at: new Date(Date.now() - 1000 * 60 * 7).toISOString(),
+    },
+    {
+      alert_id: "mock-warden-alert-002",
+      transaction_id: "680202020202020202020202",
+      combined_risk_score: 79,
+      flags: ["COLLUSION_PATTERN_DETECTED", "PAIRING_14D_GT_3"],
+      review_status: "UNDER_REVIEW",
+      review_reason: "High combined risk score from FraudGuard",
+      source: "GEMINI_FLASH",
+      created_at: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+      updated_at: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
+    },
+    {
+      alert_id: "mock-warden-alert-003",
+      transaction_id: null,
+      combined_risk_score: 80,
+      flags: ["MANUAL_WARDEN_REVIEW_REQUIRED", "VOICE_AI_FAILURE"],
+      review_status: "OPEN",
+      review_reason:
+        "Sarvam parsing provider fallback used for emergency request",
+      source: "SARVAM_FALLBACK",
+      created_at: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
+      updated_at: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
+    },
+  ];
+
+  const visibleWardenAlerts = showMockAlerts ? dummyWardenAlerts : wardenAlerts;
 
   const { data: txData, isLoading: txLoading } = useQuery({
     queryKey: ["transactions", userId],
@@ -158,6 +255,77 @@ export function DashboardPage() {
   }, [myProfileData, setKycStatus]);
 
   const effectiveKycStatus = myProfileData?.user?.kyc?.status || kycStatus;
+
+  useEffect(() => {
+    if (role !== "WARDEN") {
+      return;
+    }
+
+    const socket = io(resolveSocketBaseUrl(), {
+      withCredentials: true,
+      path: "/socket.io",
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      setAlertsConnectionState("CONNECTED");
+    });
+
+    socket.on("disconnect", () => {
+      setAlertsConnectionState("DISCONNECTED");
+    });
+
+    socket.on("connect_error", () => {
+      setAlertsConnectionState("DISCONNECTED");
+    });
+
+    socket.on("WARDEN_ALERT", (payload: Partial<WardenAlertEvent>) => {
+      if (!payload?.alert_id) {
+        return;
+      }
+
+      const nowIso = new Date().toISOString();
+      const normalizedAlert: WardenAlertEvent = {
+        alert_id: String(payload.alert_id),
+        transaction_id: payload.transaction_id
+          ? String(payload.transaction_id)
+          : null,
+        combined_risk_score: Number.isFinite(
+          Number(payload.combined_risk_score),
+        )
+          ? Math.max(0, Math.min(100, Number(payload.combined_risk_score)))
+          : 0,
+        flags: Array.isArray(payload.flags)
+          ? payload.flags.map((flag) => String(flag))
+          : [],
+        review_status: payload.review_status
+          ? String(payload.review_status)
+          : "OPEN",
+        review_reason: payload.review_reason
+          ? String(payload.review_reason)
+          : null,
+        source: payload.source ? String(payload.source) : null,
+        created_at: payload.created_at ? String(payload.created_at) : nowIso,
+        updated_at: payload.updated_at
+          ? String(payload.updated_at)
+          : payload.created_at
+            ? String(payload.created_at)
+            : nowIso,
+      };
+
+      setWardenAlerts((previousAlerts) => {
+        const deduplicatedAlerts = previousAlerts.filter(
+          (item) => item.alert_id !== normalizedAlert.alert_id,
+        );
+        return [normalizedAlert, ...deduplicatedAlerts].slice(0, 50);
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+      setAlertsConnectionState("DISCONNECTED");
+    };
+  }, [role]);
 
   const { data: mapData } = useQuery({
     queryKey: ["liveMap", city],
@@ -1100,6 +1268,7 @@ export function DashboardPage() {
     const wardenTabs = [
       { id: "VERIFICATION", label: t("Verification") },
       { id: "TRANSACTIONS", label: t("Transactions") },
+      { id: "ALERTS", label: t("Ai Alerts") },
       { id: "TECHNICIANS", label: t("Technicians") },
       { id: "COMPLAINTS", label: t("Complaint Portal") },
     ];
@@ -2196,6 +2365,275 @@ export function DashboardPage() {
                     </p>
                   ))}
               </div>
+            </div>
+          );
+        case "ALERTS":
+          return (
+            <div
+              style={{
+                backgroundColor: "#FEFCE8",
+                padding: "1.5rem",
+                borderRadius: "1rem",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "1rem",
+                  marginBottom: "1rem",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <h3 style={{ color: "#A16207", margin: "0 0 0.25rem 0" }}>
+                    {t("Warden Ai Alerts")}
+                  </h3>
+                  <p
+                    style={{
+                      color: "#666",
+                      margin: 0,
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    {t(
+                      "Live stream of AI fraud/fallback alerts from technician verify and emergency voice flows.",
+                    )}
+                  </p>
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-end",
+                    gap: "0.5rem",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.45rem",
+                      color: "#57534e",
+                      fontSize: "0.85rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={showMockAlerts}
+                      onChange={(event) =>
+                        setShowMockAlerts(event.target.checked)
+                      }
+                    />
+                    {t("Mock data")}
+                  </label>
+                  <StatusChip
+                    label={
+                      alertsConnectionState === "CONNECTED"
+                        ? t("Live Connected")
+                        : alertsConnectionState === "CONNECTING"
+                          ? t("Connecting...")
+                          : t("Disconnected")
+                    }
+                    tone={
+                      alertsConnectionState === "CONNECTED"
+                        ? "success"
+                        : alertsConnectionState === "CONNECTING"
+                          ? "warning"
+                          : "error"
+                    }
+                  />
+                </div>
+              </div>
+
+              {!visibleWardenAlerts.length ? (
+                <div
+                  style={{
+                    backgroundColor: "white",
+                    border: "1px solid #fde68a",
+                    borderRadius: "0.75rem",
+                    padding: "1rem",
+                  }}
+                >
+                  <p style={{ margin: "0 0 0.25rem 0", color: "#854d0e" }}>
+                    {t("No live alerts yet.")}
+                  </p>
+                  <p
+                    style={{ margin: 0, color: "#78716c", fontSize: "0.85rem" }}
+                  >
+                    {t(
+                      "Historical alert listing endpoint is not available yet; this panel currently shows live WARDEN_ALERT events only.",
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: "0.85rem" }}>
+                  {visibleWardenAlerts.map((item) => (
+                    <div
+                      key={item.alert_id}
+                      style={{
+                        backgroundColor: "white",
+                        border: "1px solid #fef08a",
+                        borderLeft: "4px solid #EAB308",
+                        borderRadius: "0.75rem",
+                        padding: "1rem",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: "0.75rem",
+                          flexWrap: "wrap",
+                          marginBottom: "0.65rem",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.5rem",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <StatusChip
+                            label={`${t("Risk")}: ${item.combined_risk_score}`}
+                            tone={
+                              item.combined_risk_score >= 75
+                                ? "error"
+                                : item.combined_risk_score >= 50
+                                  ? "warning"
+                                  : "info"
+                            }
+                          />
+                          <StatusChip
+                            label={tStatus(item.review_status)}
+                            tone={
+                              item.review_status === "RESOLVED"
+                                ? "success"
+                                : item.review_status === "UNDER_REVIEW"
+                                  ? "info"
+                                  : "warning"
+                            }
+                          />
+                        </div>
+                        <p
+                          style={{
+                            margin: 0,
+                            color: "#78716c",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {formatDistanceToNow(new Date(item.created_at), {
+                            addSuffix: true,
+                          })}
+                        </p>
+                      </div>
+
+                      <p
+                        style={{
+                          margin: "0 0 0.35rem 0",
+                          color: "#44403c",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        <b>{t("Source")}:</b> {item.source || "N/A"}
+                      </p>
+
+                      {item.review_reason && (
+                        <p
+                          style={{
+                            margin: "0 0 0.5rem 0",
+                            color: "#57534e",
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          <b>{t("Reason")}:</b> {item.review_reason}
+                        </p>
+                      )}
+
+                      <p
+                        style={{
+                          margin: "0 0 0.5rem 0",
+                          color: "#57534e",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        <b>{t("Alert ID")}:</b> {item.alert_id}
+                      </p>
+
+                      {item.transaction_id && (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            flexWrap: "wrap",
+                            marginBottom: "0.5rem",
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              color: "#57534e",
+                              fontSize: "0.9rem",
+                            }}
+                          >
+                            <b>{t("Transaction ID")}:</b> {item.transaction_id}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => setWardenTab("TRANSACTIONS")}
+                            style={{
+                              backgroundColor: "transparent",
+                              color: "#a16207",
+                              border: "1px solid #facc15",
+                              borderRadius: "999px",
+                              padding: "0.25rem 0.7rem",
+                              fontSize: "0.75rem",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {t("Open transactions")}
+                          </button>
+                        </div>
+                      )}
+
+                      {item.flags.length > 0 && (
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "0.45rem",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          {item.flags.map((flag) => (
+                            <span
+                              key={`${item.alert_id}-${flag}`}
+                              style={{
+                                fontSize: "0.75rem",
+                                backgroundColor: "#FEF9C3",
+                                color: "#854d0e",
+                                border: "1px solid #FDE047",
+                                borderRadius: "999px",
+                                padding: "0.2rem 0.6rem",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {flag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         case "TECHNICIANS":
