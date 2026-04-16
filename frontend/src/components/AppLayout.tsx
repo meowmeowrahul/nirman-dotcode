@@ -106,8 +106,25 @@ export function AppLayout() {
               fontSize: "1.25rem",
               display: "flex",
               alignItems: "center",
+              gap: "8px",
             }}
           >
+            <span
+              style={{
+                width: "44px",
+                height: "44px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
+              <img
+                src="/sahaylpg-logo.png"
+                alt="SahayLPG logo"
+                style={{ width: "70px", height: "70px", objectFit: "contain" }}
+              />
+            </span>
             SahayLPG
           </Link>
           <div

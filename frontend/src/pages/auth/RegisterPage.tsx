@@ -137,31 +137,11 @@ export function RegisterPage() {
     <div className="auth-shell">
       <div className="auth-header">
         <div className="auth-logo-box">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="auth-logo-icon"
-          >
-            <path
-              d="M17 8C17 6.89543 16.1046 6 15 6H9C7.89543 6 7 6.89543 7 8V9H17V8Z"
-              fill="currentColor"
-            />
-            <path
-              d="M6 11C6 9.89543 6.89543 9 8 9H16C17.1046 9 18 9.89543 18 11V18C18 19.1046 17.1046 20 16 20H8C6.89543 20 6 19.1046 6 18V11Z"
-              fill="currentColor"
-            />
-            <rect
-              x="10"
-              y="3"
-              width="4"
-              height="2"
-              rx="1"
-              fill="currentColor"
-            />
-          </svg>
+          <img
+            src="/sahaylpg-logo.png"
+            alt="SahayLPG logo"
+            className="auth-logo-image"
+          />
         </div>
         <h1 className="auth-title">SahayLPG</h1>
         <p className="auth-subtitle">{t("Create an Account")}</p>
