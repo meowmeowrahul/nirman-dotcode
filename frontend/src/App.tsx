@@ -18,7 +18,12 @@ import { useAuthStore } from "./store/authStore";
 
 function LandingRedirect() {
   const token = useAuthStore((state) => state.token);
-  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
+  const role = useAuthStore((state) => state.role);
+  const kycStatus = useAuthStore((state) => state.kycStatus);
+  const isCitizenRole = role === "BENEFICIARY" || role === "CONTRIBUTOR";
+  const target =
+    token && isCitizenRole && kycStatus !== "VERIFIED" ? "/profile" : token ? "/dashboard" : "/login";
+  return <Navigate to={target} replace />;
 }
 
 function App() {

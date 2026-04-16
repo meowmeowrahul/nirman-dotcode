@@ -85,8 +85,14 @@ async function acceptOpenRequest(req, res, next) {
     }
 
     const contributor = await User.findById(contributorId)
-      .select("contributor_listing.status")
+      .select("contributor_listing.status kyc.status")
       .lean();
+
+    if (!contributor || contributor.kyc?.status !== "VERIFIED") {
+      return res.status(403).json({
+        error: "kyc must be VERIFIED before lending LPG",
+      });
+    }
 
     if (!contributor || contributor.contributor_listing?.status !== "LISTED") {
       return res.status(403).json({
@@ -189,10 +195,16 @@ async function lockEscrow(req, res, next) {
     }
 
     const beneficiary = await User.findById(beneficiary_id)
-      .select("city region_id")
+      .select("city region_id kyc.status")
       .lean();
     if (!beneficiary) {
       return res.status(404).json({ error: "beneficiary user not found" });
+    }
+
+    if (beneficiary.kyc?.status !== "VERIFIED") {
+      return res.status(403).json({
+        error: "kyc must be VERIFIED before requesting LPG",
+      });
     }
 
     const normalizedCity =
@@ -220,6 +232,16 @@ async function lockEscrow(req, res, next) {
 
     let assignmentWarning = null;
     if (contributor_id) {
+      const selectedContributor = await User.findById(contributor_id)
+        .select("kyc.status")
+        .lean();
+
+      if (!selectedContributor || selectedContributor.kyc?.status !== "VERIFIED") {
+        return res.status(403).json({
+          error: "selected contributor is not KYC verified",
+        });
+      }
+
       const contributorActiveTx = await Transaction.findOne({
         contributor_id,
         status: { $in: ACTIVE_HOLDING_STATUSES },

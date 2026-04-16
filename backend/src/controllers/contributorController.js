@@ -5,11 +5,26 @@ function parseFiniteNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function isKycVerified(user) {
+  return user && user.kyc && user.kyc.status === "VERIFIED";
+}
+
 async function listContributor(req, res, next) {
   try {
     const userId = req.user && req.user.userId;
     if (!userId) {
       return res.status(401).json({ error: "invalid token user" });
+    }
+
+    const actor = await User.findById(userId).select("kyc.status").lean();
+    if (!actor) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    if (!isKycVerified(actor)) {
+      return res.status(403).json({
+        error: "kyc must be VERIFIED before enabling Lend LPG",
+      });
     }
 
     const lat = parseFiniteNumber(req.body.lat);
@@ -77,6 +92,17 @@ async function setListingToggle(req, res, next) {
     }
 
     const enabled = req.body.enabled;
+    const actor = await User.findById(userId).select("kyc.status").lean();
+    if (!actor) {
+      return res.status(404).json({ error: "user not found" });
+    }
+
+    if (enabled && !isKycVerified(actor)) {
+      return res.status(403).json({
+        error: "kyc must be VERIFIED before enabling Lend LPG",
+      });
+    }
+
     const lat = parseFiniteNumber(req.body.lat);
     const lng = parseFiniteNumber(req.body.lng);
 
@@ -121,6 +147,7 @@ async function setListingToggle(req, res, next) {
       listing: {
         user_id: String(user._id),
         role: user.role,
+        kyc_status: user.kyc?.status || "PENDING",
         status: user.contributor_listing?.status || "UNLISTED",
         toggle_enabled: Boolean(user.contributor_listing?.toggle_enabled),
         listed_at: user.contributor_listing?.listed_at || null,
@@ -152,6 +179,7 @@ async function getMyListingStatus(req, res, next) {
       listing: {
         user_id: String(user._id),
         role: user.role,
+        kyc_status: user.kyc?.status || "PENDING",
         status: user.contributor_listing?.status || "UNLISTED",
         toggle_enabled: Boolean(user.contributor_listing?.toggle_enabled),
         listed_at: user.contributor_listing?.listed_at || null,

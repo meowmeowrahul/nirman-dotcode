@@ -15,6 +15,7 @@ function signToken(user) {
       city: user.city || user.region_id || null,
       region_id: user.region_id || user.city || null,
       name,
+      kyc_status: (user.kyc && user.kyc.status) || "PENDING",
     },
     secret,
     { expiresIn: "12h" }

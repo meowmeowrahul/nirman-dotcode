@@ -99,6 +99,7 @@ async function liveMap(req, res, next) {
       role: { $in: LENDING_ROLES },
       "contributor_listing.status": "LISTED",
       "contributor_listing.toggle_enabled": true,
+      "kyc.status": "VERIFIED",
     };
     if (city) {
       contributorFilter.$or = [{ city }, { region_id: city }];
