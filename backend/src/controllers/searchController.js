@@ -97,12 +97,17 @@ async function liveMap(req, res, next) {
 
     const contributorFilter = {
       role: { $in: LENDING_ROLES },
-      "contributor_listing.status": "LISTED",
-      "contributor_listing.toggle_enabled": true,
+      $or: [
+        { "contributor_listing.toggle_enabled": true },
+        {
+          "contributor_listing.status": "LISTED",
+          "contributor_listing.toggle_enabled": { $exists: false },
+        },
+      ],
       "kyc.status": "VERIFIED",
     };
     if (city) {
-      contributorFilter.$or = [{ city }, { region_id: city }];
+      contributorFilter.$and = [{ $or: [{ city }, { region_id: city }] }];
     }
 
     const [activeTransactions, contributors] = await Promise.all([

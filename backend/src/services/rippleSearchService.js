@@ -6,11 +6,22 @@ const MAX_RESULTS = 10;
 const ACTIVE_LENDING_STATUSES = ["PAID_IN_ESCROW", "VERIFIED", "IN_TRANSIT"];
 const LENDING_ROLES = ["CONTRIBUTOR", "BENEFICIARY"];
 
+function buildListingEligibilityFilter() {
+  return {
+    $or: [
+      { "contributor_listing.toggle_enabled": true },
+      {
+        "contributor_listing.status": "LISTED",
+        "contributor_listing.toggle_enabled": { $exists: false },
+      },
+    ],
+  };
+}
+
 function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
   const query = {
     role: { $in: LENDING_ROLES },
-    "contributor_listing.status": "LISTED",
-    "contributor_listing.toggle_enabled": true,
+    ...buildListingEligibilityFilter(),
     "kyc.status": "VERIFIED",
   };
 
@@ -56,7 +67,12 @@ function buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId }) {
 }
 
 async function runPhase({ lat, lng, maxDistanceMeters, requesterUserId }) {
-  const pipeline = buildPipeline({ lat, lng, maxDistanceMeters, requesterUserId });
+  const pipeline = buildPipeline({
+    lat,
+    lng,
+    maxDistanceMeters,
+    requesterUserId,
+  });
   const rows = await User.aggregate([
     ...pipeline,
     {
@@ -114,8 +130,7 @@ function mapListedContributor(user) {
 async function runListedFallback({ city, requesterUserId }) {
   const baseFilter = {
     role: { $in: LENDING_ROLES },
-    "contributor_listing.status": "LISTED",
-    "contributor_listing.toggle_enabled": true,
+    ...buildListingEligibilityFilter(),
     "kyc.status": "VERIFIED",
   };
 
@@ -126,8 +141,7 @@ async function runListedFallback({ city, requesterUserId }) {
   const busyContributorIds = await Transaction.find({
     contributor_id: { $ne: null },
     status: { $in: ACTIVE_LENDING_STATUSES },
-  })
-    .distinct("contributor_id");
+  }).distinct("contributor_id");
 
   if (busyContributorIds.length > 0) {
     baseFilter._id = {
@@ -136,7 +150,16 @@ async function runListedFallback({ city, requesterUserId }) {
     };
   }
 
-  const regionFilter = city ? { ...baseFilter, $or: [{ city }, { region_id: city }] } : null;
+  const regionFilter = city
+    ? {
+        $and: [
+          baseFilter,
+          {
+            $or: [{ city }, { region_id: city }],
+          },
+        ],
+      }
+    : null;
 
   if (regionFilter) {
     const regional = await User.find(regionFilter)
